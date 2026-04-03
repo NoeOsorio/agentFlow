@@ -1,4 +1,5 @@
 import { useCallback } from 'react'
+import { useParams } from 'react-router-dom'
 import { ReactFlow, Background, Controls, MiniMap, addEdge, useNodesState, useEdgesState } from '@xyflow/react'
 import type { Connection } from '@xyflow/react'
 import '@xyflow/react/dist/style.css'
@@ -22,6 +23,7 @@ const initialEdges = [
 ]
 
 export default function CanvasPage() {
+  const { id } = useParams()
   const [nodes, , onNodesChange] = useNodesState(initialNodes)
   const [edges, setEdges, onEdgesChange] = useEdgesState(initialEdges)
 
@@ -34,7 +36,7 @@ export default function CanvasPage() {
     <div className="w-screen h-screen bg-gray-950">
       <div className="absolute top-4 left-4 z-10 text-white">
         <h1 className="text-lg font-semibold">AgentFlow Canvas</h1>
-        <p className="text-xs text-gray-400">New Pipeline</p>
+        <p className="text-xs text-gray-400">{id ? `Pipeline: ${id}` : 'New Pipeline'}</p>
       </div>
       <ReactFlow
         nodes={nodes}

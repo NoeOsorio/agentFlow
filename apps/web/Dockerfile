@@ -9,11 +9,13 @@ RUN corepack enable && corepack prepare pnpm@9.15.4 --activate
 COPY package.json pnpm-workspace.yaml pnpm-lock.yaml* ./
 COPY tsconfig.base.json ./
 COPY packages/core ./packages/core
+COPY packages/ui ./packages/ui
 COPY apps/web ./apps/web
 
 # Install and build
 RUN pnpm install --frozen-lockfile
 RUN pnpm --filter @agentflow/core build
+RUN pnpm --filter @agentflow/ui build
 RUN pnpm --filter @agentflow/web build
 
 # Stage 2: Serve
