@@ -1,0 +1,12 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: agentflow-web
+  namespace: agentflow
+spec:
+  selector:
+    app: agentflow-web
+  ports:
+    - port: 80
+      targetPort: 80
+  type: ClusterIP

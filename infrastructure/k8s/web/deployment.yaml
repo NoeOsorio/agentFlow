@@ -1,0 +1,22 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: agentflow-web
+  namespace: agentflow
+  labels:
+    app: agentflow-web
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: agentflow-web
+  template:
+    metadata:
+      labels:
+        app: agentflow-web
+    spec:
+      containers:
+        - name: web
+          image: agentflow/web:latest
+          ports:
+            - containerPort: 80

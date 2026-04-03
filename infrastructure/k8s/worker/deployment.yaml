@@ -1,0 +1,26 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: agentflow-worker
+  namespace: agentflow
+  labels:
+    app: agentflow-worker
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: agentflow-worker
+  template:
+    metadata:
+      labels:
+        app: agentflow-worker
+    spec:
+      containers:
+        - name: worker
+          image: agentflow/worker:latest
+          command: ["celery", "-A", "agentflow_worker.app", "worker", "--loglevel=info"]
+          envFrom:
+            - configMapRef:
+                name: agentflow-config
+            - secretRef:
+                name: agentflow-secrets

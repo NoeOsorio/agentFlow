@@ -1,0 +1,8 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: agentflow-config
+  namespace: agentflow
+data:
+  AGENTFLOW_ENV: "production"
+  REDIS_URL: "redis://redis:6379/0"
