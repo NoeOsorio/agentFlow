@@ -9,6 +9,8 @@ class Settings(BaseSettings):
     agentflow_env: str = "development"
     agentflow_secret_key: str = "change-me"
 
+    cors_origins: list[str] = ["http://localhost:3000"]
+
     # LLM keys (optional at startup)
     anthropic_api_key: str = ""
     openai_api_key: str = ""

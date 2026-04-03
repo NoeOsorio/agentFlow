@@ -1,7 +1,7 @@
 import uuid
 from datetime import datetime
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 
 class PipelineCreate(BaseModel):
@@ -33,4 +33,4 @@ class RunRead(BaseModel):
 
 class TriggerPayload(BaseModel):
     source: str
-    data: dict = {}
+    data: dict = Field(default_factory=dict)

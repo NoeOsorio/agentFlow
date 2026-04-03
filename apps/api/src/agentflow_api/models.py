@@ -38,7 +38,7 @@ class Run(Base):
     status: Mapped[RunStatus] = mapped_column(String(50), nullable=False, default=RunStatus.pending)
     trigger_data: Mapped[str | None] = mapped_column(Text, nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
-    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc))
 
     pipeline: Mapped["Pipeline"] = relationship("Pipeline", back_populates="runs")
     agent_executions: Mapped[list["AgentExecution"]] = relationship("AgentExecution", back_populates="run")
