@@ -1,5 +1,3 @@
-import type { Pipeline } from '@agentflow/core'
-
 /**
  * Configuration for registering an external AgentPod with AgentFlow.
  * Used by the TypeScript SDK to declare agent capabilities.
