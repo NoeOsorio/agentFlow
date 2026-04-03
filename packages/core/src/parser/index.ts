@@ -1,4 +1,5 @@
 import yaml from 'js-yaml'
+import { ZodError } from 'zod'
 import { PipelineSchema } from '../schema/pipeline'
 import type { Pipeline } from '../schema/pipeline'
 
@@ -21,13 +22,15 @@ export function serializeAST(pipeline: Pipeline): string {
 /**
  * Validate a YAML string without throwing — returns success/error result.
  */
-export function validateYAML(yamlString: string): { success: true; data: Pipeline } | { success: false; error: unknown } {
+export function validateYAML(
+  yamlString: string
+): { success: true; data: Pipeline } | { success: false; error: ZodError | Error } {
   try {
     const raw = yaml.load(yamlString)
     const result = PipelineSchema.safeParse(raw)
     if (result.success) return { success: true, data: result.data }
     return { success: false, error: result.error }
   } catch (e) {
-    return { success: false, error: e }
+    return { success: false, error: e instanceof Error ? e : new Error(String(e)) }
   }
 }

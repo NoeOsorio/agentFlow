@@ -27,8 +27,8 @@ export const PolicyConfigSchema = z.object({
   concurrency: z.number().int().positive().describe('Maximum number of agents running in parallel'),
   budget: z.string().describe('Cost budget string, e.g. "$4.00"'),
   retries: z.number().int().min(0).describe('Number of retry attempts on failure'),
-  backoff: z.string().describe('Backoff strategy, e.g. "exponential", "linear"'),
-  onFailure: z.string().describe('Failure handling strategy, e.g. "dead-letter-queue"'),
+  backoff: z.enum(['linear', 'exponential', 'fixed']).default('exponential').describe('Backoff strategy'),
+  onFailure: z.enum(['dead-letter-queue', 'stop', 'retry']).default('dead-letter-queue').describe('Failure handling strategy'),
 })
 
 export const DeployConfigSchema = z.object({
