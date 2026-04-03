@@ -12,11 +12,11 @@
       "persistent": true
     },
     "lint": {
-      "dependsOn": ["^lint"],
       "outputs": []
     },
     "test": {
       "dependsOn": ["^build"],
+      "inputs": ["$TURBO_DEFAULT$"],
       "outputs": []
     },
     "clean": {

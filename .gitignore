@@ -7,7 +7,8 @@ __pycache__/
 *.py[cod]
 .venv/
 *.egg-info/
-dist/
+.python-version
+*.dist-info/
 .pytest_cache/
 
 # Build outputs
@@ -34,5 +35,7 @@ out/
 .DS_Store
 Thumbs.db
 
-# Docker
+# Logs
 *.log
+
+# Docker
