@@ -4,7 +4,7 @@ from __future__ import annotations
 from typing import Annotated, Any
 
 from langgraph.graph.message import add_messages
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 
 class PipelineState(BaseModel):
@@ -12,13 +12,13 @@ class PipelineState(BaseModel):
 
     run_id: str
     pipeline_name: str
-    client_data: dict[str, Any] = {}
+    client_data: dict[str, Any] = Field(default_factory=dict)
     # Results keyed by agent name
-    agent_outputs: dict[str, Any] = {}
+    agent_outputs: dict[str, Any] = Field(default_factory=dict)
     # Set of completed agent names
-    completed: list[str] = []
+    completed: list[str] = Field(default_factory=list)
     # Set of failed agent names
-    failed: list[str] = []
+    failed: list[str] = Field(default_factory=list)
     # Running cost in USD
     cost_usd: float = 0.0
     # Error message if pipeline failed

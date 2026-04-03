@@ -40,4 +40,13 @@ class PipelineExecutor:
             client_data=client_data or {},
         )
         final_state = await self._graph.ainvoke(initial_state)
-        return PipelineState(**final_state)
+        # ainvoke returns a dict; validate carefully to surface partial-state errors
+        try:
+            return PipelineState(**final_state)
+        except Exception as exc:
+            # Return a failed state rather than raising on partial graph output
+            return PipelineState(
+                run_id=initial_state.run_id,
+                pipeline_name=initial_state.pipeline_name,
+                error=f"State reconstruction failed: {exc}",
+            )

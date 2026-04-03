@@ -1,7 +1,6 @@
 """Build a LangGraph StateGraph from a pipeline definition."""
 from __future__ import annotations
 
-import asyncio
 from typing import Any, Callable
 
 from langgraph.graph import StateGraph, END
@@ -54,7 +53,7 @@ def build_graph(
         dependencies: Map of agent_name -> [names of agents that must complete first]
 
     Returns:
-        A compiled LangGraph StateGraph ready to invoke
+        An uncompiled LangGraph StateGraph. Call .compile() before invoking.
     """
     agent_map = {pod.name: pod for pod in agents}
 

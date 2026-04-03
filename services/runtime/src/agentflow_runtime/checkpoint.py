@@ -1,4 +1,5 @@
 """Redis-backed checkpoint store for pipeline state recovery."""
+# TODO(phase-3): Wire into PipelineExecutor.run() to save state after each node and enable crash recovery.
 from __future__ import annotations
 
 import json
