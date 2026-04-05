@@ -18,6 +18,8 @@ build/
 out/
 *.tsbuildinfo
 node-compile-cache/
+apps/web/vite.config.d.ts
+apps/web/vite.config.js
 
 # Turbo
 .turbo/
