@@ -1,24 +1,24 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: agentflow-worker
+  name: agentflow-celery-beat
   namespace: agentflow
   labels:
-    app: agentflow-worker
+    app: agentflow-celery-beat
 spec:
-  replicas: 3
+  replicas: 1
   selector:
     matchLabels:
-      app: agentflow-worker
+      app: agentflow-celery-beat
   template:
     metadata:
       labels:
-        app: agentflow-worker
+        app: agentflow-celery-beat
     spec:
       containers:
-        - name: worker
+        - name: celery-beat
           image: agentflow/api:latest
-          command: ["celery", "-A", "agentflow_api.celery_app", "worker", "--loglevel=info", "--concurrency=4"]
+          command: ["celery", "-A", "agentflow_api.celery_app", "beat", "--loglevel=info"]
           envFrom:
             - configMapRef:
                 name: agentflow-config
@@ -26,8 +26,8 @@ spec:
                 name: agentflow-secrets
           resources:
             requests:
-              cpu: 500m
-              memory: 512Mi
+              cpu: 100m
+              memory: 128Mi
             limits:
-              cpu: "2"
-              memory: 1Gi
+              cpu: 250m
+              memory: 256Mi

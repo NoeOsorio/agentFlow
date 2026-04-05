@@ -1,24 +1,23 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: agentflow-worker
+  name: agentflow-runtime
   namespace: agentflow
   labels:
-    app: agentflow-worker
+    app: agentflow-runtime
 spec:
-  replicas: 3
+  replicas: 2
   selector:
     matchLabels:
-      app: agentflow-worker
+      app: agentflow-runtime
   template:
     metadata:
       labels:
-        app: agentflow-worker
+        app: agentflow-runtime
     spec:
       containers:
-        - name: worker
-          image: agentflow/api:latest
-          command: ["celery", "-A", "agentflow_api.celery_app", "worker", "--loglevel=info", "--concurrency=4"]
+        - name: runtime
+          image: agentflow/runtime:latest
           envFrom:
             - configMapRef:
                 name: agentflow-config

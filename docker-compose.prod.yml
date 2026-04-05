@@ -1,0 +1,39 @@
+# Production overlay — use with: docker compose -f docker-compose.yml -f docker-compose.prod.yml up
+services:
+  api:
+    volumes: []  # no hot reload
+    command: []  # use Dockerfile ENTRYPOINT (runs migrations + gunicorn)
+    environment:
+      AGENTFLOW_ENV: production
+    restart: unless-stopped
+
+  runtime:
+    volumes: []
+    restart: unless-stopped
+    environment:
+      AGENTFLOW_ENV: production
+
+  celery-worker:
+    volumes: []
+    restart: unless-stopped
+    environment:
+      AGENTFLOW_ENV: production
+
+  celery-beat:
+    volumes: []
+    restart: unless-stopped
+    environment:
+      AGENTFLOW_ENV: production
+
+  celery-flower:
+    profiles:
+      - monitoring  # only start with --profile monitoring
+
+  postgres:
+    restart: unless-stopped
+
+  redis:
+    restart: unless-stopped
+
+  web:
+    restart: unless-stopped

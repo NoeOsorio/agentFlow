@@ -1,0 +1,36 @@
+name: Deploy
+
+on:
+  workflow_run:
+    workflows: [CI]
+    types: [completed]
+    branches: [main]
+
+jobs:
+  deploy:
+    name: Deploy to Production
+    runs-on: ubuntu-latest
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
+    environment: production
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - uses: astral-sh/setup-uv@v4
+
+      - name: Run database migrations
+        run: uv run alembic upgrade head
+        working-directory: apps/api
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+
+      # Add your deployment steps here, e.g.:
+      # - name: Deploy containers
+      #   run: |
+      #     kubectl set image deployment/api api=ghcr.io/${{ github.repository }}/agentflow-api:${{ github.event.workflow_run.head_sha }}
+      #     kubectl set image deployment/runtime runtime=ghcr.io/${{ github.repository }}/agentflow-runtime:${{ github.event.workflow_run.head_sha }}
+      #     kubectl set image deployment/web web=ghcr.io/${{ github.repository }}/agentflow-web:${{ github.event.workflow_run.head_sha }}
+      #     kubectl rollout status deployment/api deployment/runtime deployment/web
