@@ -16,6 +16,8 @@ dist/
 build/
 .next/
 out/
+*.tsbuildinfo
+node-compile-cache/
 
 # Turbo
 .turbo/
