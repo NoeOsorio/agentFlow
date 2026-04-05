@@ -22,9 +22,10 @@ function toTable(
 ): string {
   if (data.length === 0) return "No resources found.";
 
+  const firstRow = data[0]!;
   const cols =
     columns ??
-    Object.keys(data[0]).map((k) => ({ key: k, header: k.toUpperCase() }));
+    Object.keys(firstRow).map((k) => ({ key: k, header: k.toUpperCase() }));
 
   const widths = cols.map((col) =>
     Math.max(
@@ -33,9 +34,9 @@ function toTable(
     ),
   );
 
-  const header = cols.map((c, i) => c.header.padEnd(widths[i])).join("  ");
+  const header = cols.map((c, i) => c.header.padEnd(widths[i]!)).join("  ");
   const rows = data.map((row) =>
-    cols.map((c, i) => String(row[c.key] ?? "").padEnd(widths[i])).join("  "),
+    cols.map((c, i) => String(row[c.key] ?? "").padEnd(widths[i]!)).join("  "),
   );
 
   return [header, ...rows].join("\n");

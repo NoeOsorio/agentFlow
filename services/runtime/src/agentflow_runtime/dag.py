@@ -55,8 +55,6 @@ def build_graph(
     Returns:
         An uncompiled LangGraph StateGraph. Call .compile() before invoking.
     """
-    agent_map = {pod.name: pod for pod in agents}
-
     graph = StateGraph(PipelineState)
 
     # Add a node for each agent

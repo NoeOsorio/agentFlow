@@ -95,6 +95,9 @@ importers:
         specifier: ^12.1.0
         version: 12.1.0
     devDependencies:
+      '@types/node':
+        specifier: ^20.17.0
+        version: 20.19.39
       tsup:
         specifier: ^8.3.6
         version: 8.5.1(jiti@1.21.7)(postcss@8.5.8)(typescript@5.9.3)
@@ -746,6 +749,9 @@ packages:
 
   '@types/js-yaml@4.0.9':
     resolution: {integrity: sha512-k4MGaQl5TGo/iipqb2UDG2UwjXziSWkh0uysQelTlJpX1qGlpUZYm8PnO4DxG1qBomtJUdYJ6qR6xdIah10JLg==}
+
+  '@types/node@20.19.39':
+    resolution: {integrity: sha512-orrrD74MBUyK8jOAD/r0+lfa1I2MO6I+vAkmAWzMYbCcgrN4lCrmK52gRFQq/JRxfYPfonkr4b0jcY7Olqdqbw==}
 
   '@types/node@22.19.17':
     resolution: {integrity: sha512-wGdMcf+vPYM6jikpS/qhg6WiqSV/OhG+jeeHT/KlVqxYfD40iYJf9/AE1uQxVWFvU7MipKRkRv8NSHiCGgPr8Q==}
@@ -1860,6 +1866,10 @@ snapshots:
   '@types/estree@1.0.8': {}
 
   '@types/js-yaml@4.0.9': {}
+
+  '@types/node@20.19.39':
+    dependencies:
+      undici-types: 6.21.0
 
   '@types/node@22.19.17':
     dependencies:
