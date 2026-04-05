@@ -12,8 +12,8 @@ COPY packages/core ./packages/core
 COPY packages/ui ./packages/ui
 COPY apps/web ./apps/web
 
-# Install and build
-RUN pnpm install --frozen-lockfile
+# Install and build (repo currently does not commit pnpm-lock.yaml)
+RUN pnpm install --no-frozen-lockfile
 RUN pnpm --filter @agentflow/core build
 RUN pnpm --filter @agentflow/ui build
 RUN pnpm --filter @agentflow/web build
