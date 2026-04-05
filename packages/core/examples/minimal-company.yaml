@@ -1,0 +1,11 @@
+apiVersion: agentflow.ai/v1
+kind: Company
+metadata:
+  name: solo-co
+spec:
+  agents:
+    - name: solo
+      role: Engineer
+      model:
+        provider: anthropic
+        model_id: claude-sonnet-4-6

@@ -1,0 +1,57 @@
+apiVersion: agentflow.ai/v1
+kind: Company
+metadata:
+  name: acme-corp
+spec:
+  description: "Multi-document manifest: Company + Pipeline"
+  policy:
+    max_monthly_budget_usd: 500
+  agents:
+    - name: bob
+      role: CEO
+      model:
+        provider: anthropic
+        model_id: claude-opus-4-6
+      capabilities: [planning, management]
+    - name: alice
+      role: Lead Engineer
+      model:
+        provider: anthropic
+        model_id: claude-sonnet-4-6
+      capabilities: [coding, review]
+      reports_to: bob
+---
+apiVersion: florai/v1
+kind: Pipeline
+namespace: default
+name: website-builder
+trigger:
+  source: stripe.payment.success
+context:
+  builder: payment-context
+  shared: true
+agents:
+  - name: researcher
+    dependsOn: []
+    resources:
+      tokens: 8000
+      timeout: "60s"
+  - name: writer
+    dependsOn: [researcher]
+    resources:
+      tokens: 12000
+      timeout: "90s"
+policy:
+  concurrency: 3
+  budget: "$4.00"
+  retries: 2
+  backoff: exponential
+  onFailure: dead-letter-queue
+output:
+  type: website
+  deploy:
+    provider: vercel
+    domain: "{{client}}.example.com"
+  notify:
+    channel: email
+    template: delivery-confirmation
