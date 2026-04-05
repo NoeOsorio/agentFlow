@@ -1,0 +1,27 @@
+apiVersion: agentflow.ai/v1
+kind: Agent
+metadata:
+  name: alice
+  namespace: acme-corp
+  labels:
+    department: engineering
+spec:
+  role: Lead Engineer
+  persona: "Senior Python engineer. Direct and pragmatic. Mentors junior devs."
+  model:
+    provider: anthropic
+    model_id: claude-sonnet-4-6
+    temperature: 0.2
+  capabilities: [coding, review, planning]
+  budget:
+    monthly_usd: 100
+    alert_threshold_pct: 80
+  reports_to: bob
+  lifecycle:
+    heartbeat:
+      interval_seconds: 30
+      timeout_seconds: 120
+      on_timeout: fail
+  memory:
+    enabled: true
+    max_entries: 1000

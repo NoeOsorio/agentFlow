@@ -1,0 +1,55 @@
+apiVersion: agentflow.ai/v1
+kind: Company
+metadata:
+  name: acme-corp
+  namespace: default
+  labels:
+    industry: software
+spec:
+  description: "AI-first software company building AgentFlow"
+  policy:
+    max_monthly_budget_usd: 500
+    require_approval_above_usd: 50
+  agents:
+    - name: bob
+      role: CEO
+      persona: "Strategic visionary. Prioritizes product-market fit."
+      model:
+        provider: anthropic
+        model_id: claude-opus-4-6
+      budget:
+        monthly_usd: 150
+      capabilities: [planning, management]
+      reports_to: null
+    - name: alice
+      role: Lead Engineer
+      persona: "Senior Python engineer. Pragmatic. Quality-focused."
+      model:
+        provider: anthropic
+        model_id: claude-sonnet-4-6
+        temperature: 0.2
+      budget:
+        monthly_usd: 100
+        alert_threshold_pct: 80
+      capabilities: [coding, review, planning]
+      reports_to: bob
+      lifecycle:
+        heartbeat:
+          interval_seconds: 30
+          timeout_seconds: 120
+          on_timeout: fail
+    - name: carol
+      role: UX Designer
+      persona: "User-empathy first. Loves clean interfaces."
+      model:
+        provider: anthropic
+        model_id: claude-sonnet-4-6
+      budget:
+        monthly_usd: 80
+      capabilities: [writing, analysis]
+      reports_to: bob
+  departments:
+    - name: engineering
+      agent_names: [alice]
+    - name: design
+      agent_names: [carol]
