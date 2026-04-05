@@ -85,7 +85,7 @@ jobs:
         with:
           python-version: "3.12"
       - uses: astral-sh/setup-uv@v4
-      - run: uv sync
+      - run: uv sync --group dev
         working-directory: apps/api
       - run: uv run pytest tests/ -v
         working-directory: apps/api
@@ -111,7 +111,7 @@ jobs:
         with:
           python-version: "3.12"
       - uses: astral-sh/setup-uv@v4
-      - run: uv sync
+      - run: uv sync --group dev
         working-directory: services/runtime
       - run: uv run pytest tests/ -v
         working-directory: services/runtime
@@ -138,9 +138,10 @@ jobs:
         with:
           python-version: "3.12"
       - uses: astral-sh/setup-uv@v4
-      - run: uv sync
+      - run: uv sync --group dev
         working-directory: apps/api
-      - run: uv run ruff check apps/ services/
+      - run: uv run ruff check ../../apps/ ../../services/
+        working-directory: apps/api
 
   docker-build:
     name: Build & Push Docker Images
