@@ -8,9 +8,9 @@ export default defineConfig([
   },
   {
     entry: ['src/cli/index.ts'],
+    outDir: 'dist/cli',
     format: ['cjs'],
     dts: false,
     clean: false,
-    banner: { js: '#!/usr/bin/env node' },
   },
 ])
