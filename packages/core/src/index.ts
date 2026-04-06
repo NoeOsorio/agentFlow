@@ -1,2 +1,5 @@
+export * from './schema/resource'
+export * from './schema/agent'
+export * from './schema/company'
 export * from './schema/pipeline'
 export * from './parser/index'
