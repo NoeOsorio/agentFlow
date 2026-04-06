@@ -245,6 +245,26 @@ El proyecto está en fase de diseño de arquitectura y especificación técnica.
 
 ---
 
+## Desarrollo local
+
+Requisitos: **Node.js ≥ 20**, **pnpm ≥ 9**, **Python ≥ 3.12** y [**uv**](https://docs.astral.sh/uv/) instalado.
+
+Tras clonar el repositorio, instala dependencias de Node y sincroniza los entornos Python de la API y del runtime:
+
+```bash
+pnpm run setup
+```
+
+Equivale a `pnpm install` más `uv sync --group dev` en `apps/api` y `services/runtime`. Para repetir solo la parte Python:
+
+```bash
+pnpm run setup:python
+```
+
+El detalle de cómo levantar Postgres, Redis, API y web está en [CLAUDE.md](./CLAUDE.md) (comandos de infraestructura y servicios).
+
+---
+
 ## Contribuir
 
 AgentFlow está diseñado para ser extendido. Cualquier agente que implemente la interfaz `AgentPod` puede integrarse al sistema. Cualquier output que implemente `OutputRouter` puede recibir el resultado de un pipeline.
