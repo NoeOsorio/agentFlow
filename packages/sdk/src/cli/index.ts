@@ -158,4 +158,21 @@ config.command("view").description("Show current config").action(() => {
   console.log(JSON.stringify(cfg, null, 2));
 });
 
-program.parseAsync(process.argv);
+program.parseAsync(process.argv).catch((err: unknown) => {
+  if (err instanceof Error) {
+    const cause = (err as NodeJS.ErrnoException & { cause?: unknown }).cause;
+    if (
+      (err as NodeJS.ErrnoException).code === "ECONNREFUSED" ||
+      (cause instanceof AggregateError && cause.code === "ECONNREFUSED")
+    ) {
+      const cfg = loadConfig();
+      console.error(`error: cannot connect to API at ${cfg.apiUrl}`);
+      console.error(`       Is the server running? Try: docker compose up api`);
+    } else {
+      console.error(`error: ${err.message}`);
+    }
+  } else {
+    console.error("error:", err);
+  }
+  process.exit(1);
+});
