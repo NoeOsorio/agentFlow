@@ -2,28 +2,28 @@
 FROM python:3.12-slim AS builder
 WORKDIR /app
 
-# Install uv
 COPY --from=ghcr.io/astral-sh/uv:latest /uv /uvx /usr/local/bin/
 
-# Copy project files
 COPY apps/api/pyproject.toml apps/api/uv.lock* ./
-
-# Install dependencies
 RUN uv sync --frozen --no-dev 2>/dev/null || uv sync --no-dev
 
 # Stage 2: Runtime
 FROM python:3.12-slim AS runner
 WORKDIR /app
 
-# Copy uv and venv
 COPY --from=ghcr.io/astral-sh/uv:latest /uv /uvx /usr/local/bin/
 COPY --from=builder /app/.venv /app/.venv
 
-# Copy source
+# Copy source and migrations
 COPY apps/api/src ./src
+COPY apps/api/migrations ./migrations
+COPY apps/api/alembic.ini ./alembic.ini
+COPY apps/api/entrypoint.sh ./entrypoint.sh
 
 ENV PATH="/app/.venv/bin:$PATH"
 ENV PYTHONPATH="/app/src"
 
+RUN chmod +x /app/entrypoint.sh
+
 EXPOSE 8000
-CMD ["uvicorn", "agentflow_api.main:app", "--host", "0.0.0.0", "--port", "8000"]
+ENTRYPOINT ["/app/entrypoint.sh"]
