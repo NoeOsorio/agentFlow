@@ -1,0 +1,86 @@
+---
+title: Writing YAML Manifests
+description: How to write and structure AgentFlow YAML pipeline specs
+---
+
+import { Aside } from "@astrojs/starlight/components";
+
+The `agentflow apply` command accepts YAML manifests — the single source of truth for pipelines, companies, and other resources.
+
+## Manifest structure
+
+Every manifest follows the same envelope:
+
+```yaml
+apiVersion: agentflow/v1
+kind: Pipeline          # Pipeline | Company
+metadata:
+  name: my-pipeline     # Unique identifier
+  namespace: default    # Logical grouping
+spec:
+  # resource-specific fields
+```
+
+## Pipeline spec
+
+```yaml
+apiVersion: agentflow/v1
+kind: Pipeline
+metadata:
+  name: invoice-processor
+  namespace: finance
+spec:
+  trigger:
+    type: webhook         # manual | webhook | schedule
+    event: stripe.payment_succeeded
+
+  agents:
+    - name: extractor
+      model: claude-sonnet-4-6
+      prompt: "Extract line items from the Stripe event payload."
+
+    - name: summarizer
+      model: claude-sonnet-4-6
+      dependsOn: [extractor]
+      prompt: "Summarize the extracted line items into a human-readable receipt."
+
+    - name: notifier
+      model: claude-haiku-4-5
+      dependsOn: [summarizer]
+      prompt: "Draft a short email notification for the customer."
+```
+
+### `dependsOn`
+
+Agents listed in `dependsOn` must complete before this agent starts. Agents with no `dependsOn` run in parallel from the start.
+
+<Aside type="note">
+  The DAG engine builds the execution graph from `dependsOn` relationships using LangGraph.
+</Aside>
+
+## Company spec
+
+```yaml
+apiVersion: agentflow/v1
+kind: Company
+metadata:
+  name: acme-corp
+  namespace: production
+spec:
+  displayName: Acme Corporation
+  plan: pro
+```
+
+## Applying manifests
+
+```bash
+# Apply a single file
+agentflow apply -f pipeline.yaml
+
+# Apply from stdin
+cat pipeline.yaml | agentflow apply -f -
+```
+
+<Aside type="caution">
+  Applying a manifest that already exists will update it in place. There is no separate `update` command.
+</Aside>

@@ -263,6 +263,16 @@ pnpm run setup:python
 
 El detalle de cómo levantar Postgres, Redis, API y web está en [CLAUDE.md](./CLAUDE.md) (comandos de infraestructura y servicios).
 
+### Documentación del CLI
+
+```bash
+# Modo desarrollo (hot reload en http://localhost:4321)
+pnpm --filter @agentflow/cli-docs dev
+
+# Build estático
+pnpm --filter @agentflow/cli-docs build
+```
+
 ---
 
 ## Contribuir

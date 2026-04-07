@@ -1,0 +1,74 @@
+---
+title: agentflow logs
+description: Stream live SSE logs for a run
+---
+
+import { Aside } from "@astrojs/starlight/components";
+
+## Synopsis
+
+```
+agentflow logs <run-id>
+```
+
+## Description
+
+Connects to the API's SSE (Server-Sent Events) log stream for the given run and writes log lines to stdout in real time. The command exits when the stream closes (i.e., when the run completes or fails).
+
+## Arguments
+
+| Argument | Required | Description |
+|----------|----------|-------------|
+| `<run-id>` | Yes | The run ID returned by `agentflow run` |
+
+## Examples
+
+**Stream logs for a run:**
+
+```bash
+agentflow logs run_01j8xk4m...
+```
+
+**Run a pipeline and immediately tail logs:**
+
+```bash
+RUN_ID=$(agentflow run hello-world | jq -r '.id')
+agentflow logs "$RUN_ID"
+```
+
+## Output
+
+Log lines are written to stdout as they arrive from the SSE stream:
+
+```
+[greeter] Starting agent...
+[greeter] Prompt: Say hello and introduce AgentFlow...
+[greeter] Response: Hello! AgentFlow is a platform for...
+[greeter] Done. Tokens: 142, Cost: $0.0004
+[summarizer] Starting agent...
+...
+```
+
+<Aside type="tip">
+  Pipe into `grep` to filter by agent name:
+  ```bash
+  agentflow logs run_01j8xk... | grep '\[greeter\]'
+  ```
+</Aside>
+
+<Aside type="note">
+  If the run has already finished when you call `logs`, the command will still connect and the stream will close immediately after replaying buffered events (if the API supports it).
+</Aside>
+
+## Error handling
+
+| Error | Cause |
+|-------|-------|
+| `Failed to stream logs (404)` | Run ID does not exist |
+| `Failed to stream logs (401)` | Invalid or missing API key |
+| `cannot connect to API` | API is not reachable |
+
+## Related
+
+- [`agentflow run`](/reference/run/) — start a pipeline run
+- [`agentflow get runs`](/reference/get/) — list run IDs

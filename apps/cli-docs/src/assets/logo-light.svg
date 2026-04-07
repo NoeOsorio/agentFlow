@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 180 36" fill="none">
+  <rect x="0" y="4" width="28" height="28" rx="6" fill="#4f46e5"/>
+  <path d="M8 18 L14 10 L20 18 L14 26 Z" fill="white" opacity="0.9"/>
+  <path d="M13 18 L19 10 L25 18 L19 26 Z" fill="white" opacity="0.5"/>
+  <text x="36" y="25" font-family="system-ui, sans-serif" font-weight="700" font-size="18" fill="#0d0d1a" letter-spacing="-0.5">AgentFlow</text>
+</svg>

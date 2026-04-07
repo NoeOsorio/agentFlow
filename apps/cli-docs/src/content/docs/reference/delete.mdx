@@ -1,0 +1,70 @@
+---
+title: agentflow delete
+description: Delete a company or pipeline by name
+---
+
+import { Aside } from "@astrojs/starlight/components";
+
+## Synopsis
+
+```
+agentflow delete company <name>
+agentflow delete pipeline <name>
+```
+
+## Description
+
+Permanently deletes the named resource from the API. This action cannot be undone.
+
+## Subcommands
+
+### `delete company`
+
+```
+agentflow delete company <name>
+```
+
+| Argument | Required | Description |
+|----------|----------|-------------|
+| `<name>` | Yes | Name of the company to delete |
+
+```bash
+agentflow delete company acme-corp
+# company "acme-corp" deleted
+```
+
+---
+
+### `delete pipeline`
+
+```
+agentflow delete pipeline <name>
+```
+
+| Argument | Required | Description |
+|----------|----------|-------------|
+| `<name>` | Yes | Name of the pipeline to delete |
+
+```bash
+agentflow delete pipeline invoice-processor
+# pipeline "invoice-processor" deleted
+```
+
+<Aside type="danger">
+  Deletion is **permanent and immediate**. There is no confirmation prompt. Ensure you have a backup of the YAML manifest before deleting.
+</Aside>
+
+## Output
+
+On success, a confirmation message is printed:
+
+```
+company "acme-corp" deleted
+```
+
+On failure (e.g., resource not found), an error message is printed and the CLI exits with code `1`.
+
+## Related
+
+- [`agentflow apply`](/reference/apply/) — re-apply a manifest after deletion
+- [`agentflow get`](/reference/get/) — verify resource existence before deletion

@@ -1,0 +1,91 @@
+---
+title: agentflow config
+description: Manage CLI connection settings
+---
+
+import { Aside } from "@astrojs/starlight/components";
+
+## Synopsis
+
+```
+agentflow config set-context --url <url> [--key <api-key>]
+agentflow config view
+```
+
+## Description
+
+The `config` command manages how the CLI connects to the AgentFlow API. Settings are persisted locally at `~/.agentflow/config.json`.
+
+## Subcommands
+
+### `config set-context`
+
+Set the API URL and optional authentication key.
+
+```
+agentflow config set-context --url <url> [--key <api-key>]
+```
+
+| Option | Required | Description |
+|--------|----------|-------------|
+| `--url <url>` | Yes | Base URL of the AgentFlow API |
+| `--key <api-key>` | No | Bearer token for authenticated APIs |
+
+**Examples:**
+
+```bash
+# Local development
+agentflow config set-context --url http://localhost:8000
+
+# Production with API key
+agentflow config set-context --url https://api.example.com --key sk-your-api-key
+```
+
+**Output:**
+
+```
+Context saved: https://api.example.com
+```
+
+---
+
+### `config view`
+
+Print the current configuration as JSON.
+
+```
+agentflow config view
+```
+
+**Output:**
+
+```json
+{
+  "apiUrl": "https://api.example.com",
+  "apiKey": "sk-your-api-key"
+}
+```
+
+## Config file
+
+Settings are stored at `~/.agentflow/config.json`. You can edit this file directly.
+
+```json
+{
+  "apiUrl": "http://localhost:8000",
+  "apiKey": "sk-optional"
+}
+```
+
+| Field | Default | Description |
+|-------|---------|-------------|
+| `apiUrl` | `http://localhost:8000` | API base URL |
+| `apiKey` | _(none)_ | Bearer token sent as `Authorization: Bearer <key>` |
+
+<Aside type="note">
+  If no config file exists, the CLI defaults to `http://localhost:8000` with no authentication — suitable for local development.
+</Aside>
+
+<Aside type="caution">
+  The config file is stored in plaintext. Avoid committing `~/.agentflow/config.json` to version control if it contains secrets.
+</Aside>
