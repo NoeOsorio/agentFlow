@@ -1,3 +1,4 @@
+import json
 import uuid
 from typing import Annotated
 
@@ -6,8 +7,8 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from ..database import get_db
-from ..models import Pipeline
-from ..schemas import PipelineCreate, PipelineRead
+from ..models import Pipeline, Run, RunStatus
+from ..schemas import PipelineCreate, PipelineRead, RunRead
 
 router = APIRouter(prefix="/pipelines", tags=["pipelines"])
 
@@ -29,18 +30,41 @@ async def create_pipeline(payload: PipelineCreate, db: DB):
     return pipeline
 
 
-@router.get("/{pipeline_id}", response_model=PipelineRead)
-async def get_pipeline(pipeline_id: uuid.UUID, db: DB):
-    pipeline = await db.get(Pipeline, pipeline_id)
+@router.get("/{name}", response_model=PipelineRead)
+async def get_pipeline(name: str, db: DB):
+    result = await db.execute(select(Pipeline).where(Pipeline.name == name))
+    pipeline = result.scalar_one_or_none()
     if not pipeline:
         raise HTTPException(status_code=404, detail="Pipeline not found")
     return pipeline
 
 
-@router.delete("/{pipeline_id}", status_code=204)
-async def delete_pipeline(pipeline_id: uuid.UUID, db: DB):
-    pipeline = await db.get(Pipeline, pipeline_id)
+@router.delete("/{name}", status_code=204)
+async def delete_pipeline(name: str, db: DB):
+    result = await db.execute(select(Pipeline).where(Pipeline.name == name))
+    pipeline = result.scalar_one_or_none()
     if not pipeline:
         raise HTTPException(status_code=404, detail="Pipeline not found")
+    runs_result = await db.execute(select(Run).where(Run.pipeline_id == pipeline.id))
+    for run in runs_result.scalars().all():
+        await db.delete(run)
     await db.delete(pipeline)
     await db.commit()
+
+
+@router.post("/{name}/execute", response_model=RunRead, status_code=202)
+async def execute_pipeline(name: str, body: dict, db: DB):
+    result = await db.execute(select(Pipeline).where(Pipeline.name == name))
+    pipeline = result.scalar_one_or_none()
+    if not pipeline:
+        raise HTTPException(status_code=404, detail="Pipeline not found")
+
+    run = Run(
+        pipeline_id=pipeline.id,
+        status=RunStatus.pending,
+        trigger_data=json.dumps(body.get("trigger_data", {})),
+    )
+    db.add(run)
+    await db.commit()
+    await db.refresh(run)
+    return run

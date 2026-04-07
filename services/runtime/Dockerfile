@@ -19,7 +19,4 @@ COPY services/runtime/src ./src
 ENV PATH="/app/.venv/bin:$PATH"
 ENV PYTHONPATH="/app/src"
 
-HEALTHCHECK --interval=30s --timeout=5s --retries=3 \
-  CMD python -m agentflow_runtime.healthcheck || exit 1
-
 CMD ["python", "-m", "agentflow_runtime"]
