@@ -62,53 +62,6 @@ services:
     volumes:
       - ./services/runtime/src:/app/src  # hot reload in dev
 
-  celery-worker:
-    build:
-      context: .
-      dockerfile: apps/api/Dockerfile
-    environment:
-      DATABASE_URL: postgresql+asyncpg://postgres:postgres@postgres:5432/agentflow
-      REDIS_URL: redis://redis:6379/0
-      CELERY_BROKER_URL: redis://redis:6379/0
-      AGENTFLOW_ENV: development
-    depends_on:
-      postgres:
-        condition: service_healthy
-      redis:
-        condition: service_healthy
-    command: celery -A agentflow_api.celery_app worker --loglevel=info --concurrency=4
-    volumes:
-      - ./apps/api/src:/app/src
-
-  celery-beat:
-    build:
-      context: .
-      dockerfile: apps/api/Dockerfile
-    environment:
-      DATABASE_URL: postgresql+asyncpg://postgres:postgres@postgres:5432/agentflow
-      REDIS_URL: redis://redis:6379/0
-      CELERY_BROKER_URL: redis://redis:6379/0
-      AGENTFLOW_ENV: development
-    depends_on:
-      redis:
-        condition: service_healthy
-    command: celery -A agentflow_api.celery_app beat --loglevel=info
-    volumes:
-      - ./apps/api/src:/app/src
-
-  celery-flower:
-    build:
-      context: .
-      dockerfile: apps/api/Dockerfile
-    ports:
-      - '5555:5555'
-    environment:
-      CELERY_BROKER_URL: redis://redis:6379/0
-    depends_on:
-      redis:
-        condition: service_healthy
-    command: celery -A agentflow_api.celery_app flower --port=5555
-
   web:
     build:
       context: .

@@ -53,6 +53,10 @@ async function request(
     throw new Error(`${method} ${urlPath} failed (${res.status}): ${text}`);
   }
 
+  if (res.status === 204) {
+    return null;
+  }
+
   const contentType = res.headers.get("content-type") ?? "";
   if (contentType.includes("application/json")) {
     return res.json();
