@@ -1,0 +1,69 @@
+---
+title: Installation
+description: Install the AgentFlow CLI
+---
+
+import { Tabs, TabItem, Steps, Aside } from "@astrojs/starlight/components";
+
+## Requirements
+
+- Node.js ≥ 20
+- A running AgentFlow API (default: `http://localhost:8000`)
+
+## Install
+
+<Tabs>
+  <TabItem label="pnpm (monorepo)">
+    The CLI is bundled in `@agentflow/sdk`. In the monorepo, install workspace dependencies:
+
+    ```bash
+    pnpm install
+    pnpm build
+    ```
+
+    Then run via:
+
+    ```bash
+    pnpm --filter @agentflow/sdk exec agentflow --help
+    ```
+  </TabItem>
+  <TabItem label="npm (global)">
+    ```bash
+    npm install -g @agentflow/sdk
+    agentflow --help
+    ```
+  </TabItem>
+</Tabs>
+
+## Connect to the API
+
+Before running commands, tell the CLI where your API lives:
+
+```bash
+agentflow config set-context --url http://localhost:8000
+```
+
+For authenticated environments, include your API key:
+
+```bash
+agentflow config set-context --url https://api.example.com --key sk-your-key
+```
+
+Config is saved to `~/.agentflow/config.json`.
+
+<Aside type="tip">
+  The default API URL is `http://localhost:8000`. If you're running the full stack with Docker, no configuration is needed.
+</Aside>
+
+## Verify
+
+```bash
+agentflow config view
+agentflow get pipelines
+```
+
+If you see `error: cannot connect to API`, start the API first:
+
+```bash
+docker compose up api -d
+```

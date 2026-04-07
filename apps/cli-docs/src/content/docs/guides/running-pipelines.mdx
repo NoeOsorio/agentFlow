@@ -1,0 +1,65 @@
+---
+title: Running Pipelines
+description: Execute pipelines and monitor runs
+---
+
+import { Aside } from "@astrojs/starlight/components";
+
+## Execute a pipeline
+
+```bash
+agentflow run <pipeline-name>
+```
+
+### With trigger input
+
+Pass structured JSON as the trigger payload:
+
+```bash
+agentflow run invoice-processor --input '{"amount": 4200, "currency": "usd"}'
+```
+
+The `--input` value is parsed as JSON and forwarded as `trigger_data` to the pipeline.
+
+## Monitor a run
+
+The `run` command returns a run object with an `id`:
+
+```json
+{
+  "id": "run_01j8xk...",
+  "status": "running",
+  "started_at": "2026-04-06T12:00:00Z"
+}
+```
+
+Stream live logs for that run:
+
+```bash
+agentflow logs run_01j8xk...
+```
+
+## List runs
+
+```bash
+# All runs
+agentflow get runs
+
+# Filtered by pipeline
+agentflow get runs --pipeline invoice-processor
+
+# JSON output for scripting
+agentflow get runs -o json | jq '.[] | select(.status == "failed")'
+```
+
+## Run lifecycle
+
+| Status | Meaning |
+|--------|---------|
+| `running` | Agents are executing |
+| `completed` | All agents finished successfully |
+| `failed` | One or more agents failed |
+
+<Aside type="tip">
+  Combine `get runs -o json` with `jq` in CI to gate deployments on pipeline status.
+</Aside>

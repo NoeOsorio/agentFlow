@@ -1,0 +1,67 @@
+---
+title: agentflow apply
+description: Apply a YAML manifest to create or update a resource
+---
+
+import { Aside } from "@astrojs/starlight/components";
+
+## Synopsis
+
+```
+agentflow apply -f <path>
+```
+
+## Description
+
+Reads a YAML manifest file and applies it to the AgentFlow API. If the resource does not exist, it is created. If it already exists, it is updated in place.
+
+Supported resource kinds: `Pipeline`, `Company`.
+
+## Options
+
+| Option | Required | Description |
+|--------|----------|-------------|
+| `-f, --file <path>` | Yes | Path to the YAML manifest file |
+
+## Examples
+
+**Apply a pipeline manifest:**
+
+```bash
+agentflow apply -f ./pipelines/invoice-processor.yaml
+```
+
+**Apply a company manifest:**
+
+```bash
+agentflow apply -f ./companies/acme.yaml
+```
+
+**Apply multiple files in sequence:**
+
+```bash
+agentflow apply -f company.yaml
+agentflow apply -f pipeline.yaml
+```
+
+## Output
+
+On success, the API response is printed as formatted JSON:
+
+```json
+{
+  "id": "pip_01j8...",
+  "name": "invoice-processor",
+  "namespace": "finance",
+  "created_at": "2026-04-06T12:00:00Z"
+}
+```
+
+<Aside type="caution">
+  `apply` is **idempotent** — running it twice with the same file is safe. The second call updates the existing resource.
+</Aside>
+
+## Related
+
+- [`agentflow get pipelines`](/reference/get/) — list applied pipelines
+- [`agentflow run`](/reference/run/) — execute a pipeline after applying it

@@ -1,0 +1,76 @@
+---
+title: Quick Start
+description: Deploy and run your first pipeline in under 5 minutes
+---
+
+import { Steps, Aside } from "@astrojs/starlight/components";
+
+<Steps>
+
+1. **Start the stack**
+
+   ```bash
+   docker compose up postgres redis api -d
+   ```
+
+2. **Connect the CLI**
+
+   ```bash
+   agentflow config set-context --url http://localhost:8000
+   ```
+
+3. **Write a manifest**
+
+   Create `my-pipeline.yaml`:
+
+   ```yaml
+   apiVersion: agentflow/v1
+   kind: Pipeline
+   metadata:
+     name: hello-world
+     namespace: default
+   spec:
+     trigger:
+       type: manual
+     agents:
+       - name: greeter
+         model: claude-sonnet-4-6
+         prompt: "Say hello and introduce AgentFlow in one sentence."
+   ```
+
+4. **Apply the manifest**
+
+   ```bash
+   agentflow apply -f my-pipeline.yaml
+   ```
+
+5. **Run the pipeline**
+
+   ```bash
+   agentflow run hello-world
+   ```
+
+6. **Watch the logs**
+
+   Copy the `run_id` from the output, then:
+
+   ```bash
+   agentflow logs <run-id>
+   ```
+
+7. **List your resources**
+
+   ```bash
+   agentflow get pipelines
+   agentflow get runs --pipeline hello-world
+   ```
+
+</Steps>
+
+<Aside type="tip">
+  Use `-o json` on any `get` command to pipe output into `jq` for scripting:
+
+  ```bash
+  agentflow get runs -o json | jq '.[0].status'
+  ```
+</Aside>

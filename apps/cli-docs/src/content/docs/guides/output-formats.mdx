@@ -1,0 +1,67 @@
+---
+title: Output Formats
+description: Control CLI output with --output table | json | yaml
+---
+
+Every `agentflow get` command accepts `-o` / `--output` to control the format.
+
+## Table (default)
+
+Human-readable, aligned columns. Ideal for interactive use.
+
+```bash
+agentflow get pipelines
+```
+
+```
+NAME               NAMESPACE   VERSION   CREATED
+invoice-processor  finance     1         2026-04-01T10:00:00Z
+hello-world        default     1         2026-04-06T08:00:00Z
+```
+
+## JSON
+
+Machine-readable. Use with `jq` for scripting and CI.
+
+```bash
+agentflow get pipelines -o json
+```
+
+```json
+[
+  {
+    "name": "invoice-processor",
+    "namespace": "finance",
+    "version": 1,
+    "created_at": "2026-04-01T10:00:00Z"
+  }
+]
+```
+
+## YAML
+
+Structured output. Useful for diffing or feeding back into manifests.
+
+```bash
+agentflow get pipelines -o yaml
+```
+
+```yaml
+- name: invoice-processor
+  namespace: finance
+  version: 1
+  created_at: 2026-04-01T10:00:00Z
+```
+
+## Scripting examples
+
+```bash
+# Get all failed runs
+agentflow get runs -o json | jq '[.[] | select(.status == "failed")]'
+
+# Extract pipeline names
+agentflow get pipelines -o json | jq -r '.[].name'
+
+# Count runs by status
+agentflow get runs -o json | jq 'group_by(.status) | map({status: .[0].status, count: length})'
+```

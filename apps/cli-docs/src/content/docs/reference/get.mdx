@@ -1,0 +1,95 @@
+---
+title: agentflow get
+description: List resources — companies, pipelines, runs
+---
+
+## Synopsis
+
+```
+agentflow get <resource> [options]
+```
+
+## Subcommands
+
+### `get companies`
+
+List all companies.
+
+```
+agentflow get companies [-o <format>]
+```
+
+**Columns:** `NAME`, `NAMESPACE`, `CREATED`
+
+```bash
+agentflow get companies
+agentflow get companies -o json
+```
+
+---
+
+### `get pipelines`
+
+List all pipelines.
+
+```
+agentflow get pipelines [-o <format>]
+```
+
+**Columns:** `NAME`, `NAMESPACE`, `VERSION`, `CREATED`
+
+```bash
+agentflow get pipelines
+agentflow get pipelines -o yaml
+```
+
+---
+
+### `get runs`
+
+List pipeline runs, optionally filtered by pipeline name.
+
+```
+agentflow get runs [--pipeline <name>] [-o <format>]
+```
+
+**Columns:** `ID`, `STATUS`, `STARTED`, `FINISHED`
+
+```bash
+# All runs
+agentflow get runs
+
+# Runs for a specific pipeline
+agentflow get runs --pipeline invoice-processor
+
+# Machine-readable output
+agentflow get runs -o json
+```
+
+## Common Options
+
+| Option | Default | Description |
+|--------|---------|-------------|
+| `-o, --output <format>` | `table` | Output format: `table`, `json`, `yaml` |
+
+### `get runs` specific
+
+| Option | Description |
+|--------|-------------|
+| `--pipeline <name>` | Filter runs by pipeline name |
+
+## Examples
+
+```bash
+# Watch for failed runs in CI
+agentflow get runs --pipeline invoice-processor -o json \
+  | jq 'map(select(.status == "failed")) | length'
+
+# Get the most recent run ID
+agentflow get runs -o json | jq -r 'sort_by(.started_at) | last | .id'
+```
+
+## Related
+
+- [`agentflow logs`](/reference/logs/) — stream logs for a specific run
+- [`agentflow run`](/reference/run/) — execute a pipeline

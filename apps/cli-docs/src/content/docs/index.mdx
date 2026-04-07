@@ -1,0 +1,38 @@
+---
+title: AgentFlow CLI
+description: kubectl-style CLI for building and managing AI agent pipelines
+template: splash
+hero:
+  tagline: Manage AI agent pipelines from the terminal — declare, run, and observe with a single binary.
+  actions:
+    - text: Get Started
+      link: /getting-started/installation/
+      icon: right-arrow
+      variant: primary
+    - text: CLI Reference
+      link: /reference/apply/
+      icon: open-book
+---
+
+import { CardGrid, Card } from "@astrojs/starlight/components";
+
+## What is AgentFlow?
+
+AgentFlow is a platform for building AI agent pipelines defined declaratively in YAML. A pipeline triggers on an event (e.g. a Stripe payment), orchestrates a DAG of `AgentPod` workers via LangGraph, and produces an output (deployed website, report, etc.).
+
+The `agentflow` CLI gives you kubectl-style access to your pipelines, runs, and resources — directly from the terminal.
+
+<CardGrid stagger>
+  <Card title="Declarative by default" icon="document">
+    Define pipelines in YAML. Apply them with a single command. The spec is always the source of truth.
+  </Card>
+  <Card title="Live log streaming" icon="seti:log">
+    Stream real-time SSE logs from any run. No polling, no refresh.
+  </Card>
+  <Card title="Flexible output" icon="list-format">
+    Every `get` command supports `--output table | json | yaml`. Pipe into `jq`, scripts, or CI.
+  </Card>
+  <Card title="Kubectl-familiar" icon="puzzle">
+    `apply`, `get`, `run`, `logs`, `delete` — the same mental model you already know.
+  </Card>
+</CardGrid>

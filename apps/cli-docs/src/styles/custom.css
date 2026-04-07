@@ -1,0 +1,30 @@
+/* AgentFlow brand tokens */
+:root {
+  --sl-color-accent-low: #1a1f3a;
+  --sl-color-accent: #6366f1;
+  --sl-color-accent-high: #a5b4fc;
+  --sl-color-white: #ffffff;
+  --sl-color-gray-1: #f0f0f5;
+  --sl-color-gray-2: #c4c4cf;
+  --sl-color-gray-3: #8e8e9d;
+  --sl-color-gray-4: #5a5a6e;
+  --sl-color-gray-5: #353548;
+  --sl-color-gray-6: #1c1c2e;
+  --sl-color-black: #0d0d1a;
+}
+
+:root[data-theme="light"] {
+  --sl-color-accent-low: #eef0ff;
+  --sl-color-accent: #4f46e5;
+  --sl-color-accent-high: #3730a3;
+}
+
+/* Tighter code blocks */
+.sl-markdown-content pre {
+  border-radius: 8px;
+}
+
+/* Command signature styling */
+.sl-markdown-content code {
+  font-size: 0.875em;
+}

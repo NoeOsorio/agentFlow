@@ -1,0 +1,75 @@
+---
+title: agentflow run
+description: Execute a pipeline by name
+---
+
+import { Aside } from "@astrojs/starlight/components";
+
+## Synopsis
+
+```
+agentflow run <pipeline-name> [--input <json>]
+```
+
+## Description
+
+Triggers the execution of a named pipeline. The pipeline must have been applied first with [`agentflow apply`](/reference/apply/).
+
+Returns a run object immediately. The pipeline executes asynchronously — use [`agentflow logs`](/reference/logs/) to stream live output.
+
+## Arguments
+
+| Argument | Required | Description |
+|----------|----------|-------------|
+| `<pipeline-name>` | Yes | Name of the pipeline to execute |
+
+## Options
+
+| Option | Description |
+|--------|-------------|
+| `--input <json>` | JSON-encoded trigger data forwarded to the pipeline as `trigger_data` |
+
+## Examples
+
+**Run with no input:**
+
+```bash
+agentflow run hello-world
+```
+
+**Run with structured trigger data:**
+
+```bash
+agentflow run invoice-processor --input '{"amount": 4200, "currency": "usd", "customer_id": "cus_abc"}'
+```
+
+## Output
+
+```json
+{
+  "id": "run_01j8xk4m...",
+  "pipeline_name": "invoice-processor",
+  "status": "running",
+  "started_at": "2026-04-06T12:00:00Z",
+  "finished_at": null
+}
+```
+
+Copy the `id` and pass it to `agentflow logs` to follow progress:
+
+```bash
+agentflow logs run_01j8xk4m...
+```
+
+<Aside type="note">
+  `--input` must be valid JSON. Use single quotes on Unix shells to avoid escaping issues:
+  ```bash
+  agentflow run my-pipeline --input '{"key": "value"}'
+  ```
+</Aside>
+
+## Related
+
+- [`agentflow apply`](/reference/apply/) — register a pipeline before running it
+- [`agentflow logs`](/reference/logs/) — stream real-time logs for a run
+- [`agentflow get runs`](/reference/get/) — list all runs
