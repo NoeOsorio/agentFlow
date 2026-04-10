@@ -1,181 +1,191 @@
-// @plan B3-PR-3
+/**
+ * @plan B3-PR-4
+ * computeVariableScope — pure function: topological sort + upstream variable derivation.
+ * No side effects, no store imports; testable in isolation.
+ */
+
 import { useMemo } from 'react'
-import type { CanvasNode, CanvasEdge } from './types'
+import type { PipelineNode } from '@agentflow/core'
+import type { VariableType } from '@agentflow/core'
 import { usePipelineStore } from './pipelineStore'
 
 // ---------------------------------------------------------------------------
 // Public types
 // ---------------------------------------------------------------------------
 
-export type AvailableVariable = {
+export interface AvailableVariable {
   node_id: string
   variable: string
   path?: string[]
-  type: string
-  description: string
+  type: VariableType
+  description?: string
+}
+
+// Minimal structural interfaces so this function is testable without
+// constructing full @xyflow/react Node / Edge objects.
+interface NodeLike {
+  id: string
+  data: PipelineNode
+}
+
+interface EdgeLike {
+  source: string
+  target: string
 }
 
 // ---------------------------------------------------------------------------
-// Output variable derivation by node type
+// Fixed output schemas per node type
 // ---------------------------------------------------------------------------
 
-function getNodeOutputs(node: CanvasNode): AvailableVariable[] {
-  const nid = node.id
-  const data = node.data as Record<string, unknown>
+type OutputSpec = Omit<AvailableVariable, 'node_id'>
 
-  switch (data.type) {
-    case 'start': {
-      const outputs = (data.outputs as Array<{ name: string; type?: string }> | undefined) ?? []
-      return outputs.map(o => ({
-        node_id: nid,
-        variable: o.name,
-        type: o.type ?? 'string',
-        description: `Output from start node`,
-      }))
-    }
-
-    case 'agent_pod':
-      return [
-        { node_id: nid, variable: 'response', type: 'string', description: 'Agent response text' },
-        { node_id: nid, variable: 'agent_name', type: 'string', description: 'Name of the agent' },
-        { node_id: nid, variable: 'agent_role', type: 'string', description: 'Role of the agent' },
-      ]
-
-    case 'llm':
-      return [
-        { node_id: nid, variable: 'text', type: 'string', description: 'LLM output text' },
-        { node_id: nid, variable: 'tokens_used', type: 'number', description: 'Tokens consumed' },
-      ]
-
-    case 'code': {
-      const outputs = (data.outputs as Array<{ name: string; type?: string }> | undefined) ?? []
-      return outputs.map(o => ({
-        node_id: nid,
-        variable: o.name,
-        type: o.type ?? 'string',
-        description: `Code output: ${o.name}`,
-      }))
-    }
-
-    case 'http':
-      return [
-        { node_id: nid, variable: 'status_code', type: 'number', description: 'HTTP status code' },
-        { node_id: nid, variable: 'body', type: 'object', description: 'Response body' },
-        { node_id: nid, variable: 'headers', type: 'object', description: 'Response headers' },
-      ]
-
-    case 'template':
-      return [
-        { node_id: nid, variable: 'text', type: 'string', description: 'Rendered template text' },
-      ]
-
-    default:
-      return []
-  }
+const FIXED_OUTPUTS: Partial<Record<PipelineNode['type'], OutputSpec[]>> = {
+  agent_pod: [
+    { variable: 'response', type: 'string', description: 'Agent response text' },
+    { variable: 'agent_name', type: 'string', description: 'Name of the executing agent' },
+    { variable: 'agent_role', type: 'string', description: 'Role of the executing agent' },
+  ],
+  llm: [
+    { variable: 'text', type: 'string', description: 'LLM output text' },
+    { variable: 'tokens_used', type: 'number', description: 'Total tokens consumed' },
+  ],
+  http: [
+    { variable: 'status_code', type: 'number', description: 'HTTP response status code' },
+    { variable: 'body', type: 'object', description: 'HTTP response body' },
+    { variable: 'headers', type: 'object', description: 'HTTP response headers' },
+  ],
+  template: [
+    { variable: 'text', type: 'string', description: 'Rendered template text' },
+  ],
 }
 
 // ---------------------------------------------------------------------------
-// Topological sort (Kahn's algorithm)
-// Returns null if a cycle is detected.
+// Helpers
 // ---------------------------------------------------------------------------
 
-function topoSort(nodes: CanvasNode[], edges: CanvasEdge[]): CanvasNode[] | null {
-  const inDegree: Record<string, number> = {}
-  const adj: Record<string, string[]> = {}
+/** Derives the declared outputs for a node. */
+function deriveNodeOutputs(node: NodeLike): OutputSpec[] {
+  const d = node.data
 
-  for (const n of nodes) {
-    inDegree[n.id] = 0
-    adj[n.id] = []
+  if (d.type === 'start') {
+    return (d.outputs ?? []).map((def) => ({
+      variable: def.key,
+      type: def.type,
+      description: def.description,
+    }))
   }
 
-  for (const e of edges) {
-    if (adj[e.source] !== undefined) {
-      adj[e.source]!.push(e.target)
-    }
-    inDegree[e.target] = (inDegree[e.target] ?? 0) + 1
+  if (d.type === 'code') {
+    return (d.outputs ?? []).map((def) => ({
+      variable: def.key,
+      type: def.type,
+      description: def.description,
+    }))
   }
 
-  const queue: string[] = Object.entries(inDegree)
-    .filter(([, deg]) => deg === 0)
-    .map(([id]) => id)
-
-  const sorted: string[] = []
-  const nodeMap = new Map(nodes.map(n => [n.id, n]))
-
-  while (queue.length > 0) {
-    const id = queue.shift()!
-    sorted.push(id)
-    for (const neighbor of adj[id] ?? []) {
-      inDegree[neighbor]!--
-      if (inDegree[neighbor] === 0) {
-        queue.push(neighbor)
-      }
-    }
-  }
-
-  if (sorted.length !== nodes.length) return null // cycle detected
-
-  return sorted.map(id => nodeMap.get(id)!).filter(Boolean)
+  return FIXED_OUTPUTS[d.type] ?? []
 }
 
 // ---------------------------------------------------------------------------
-// Ancestor discovery (BFS on reversed graph)
-// ---------------------------------------------------------------------------
-
-function getAncestors(edges: CanvasEdge[], forNodeId: string): Set<string> {
-  const parents: Record<string, string[]> = {}
-  for (const e of edges) {
-    if (!parents[e.target]) parents[e.target] = []
-    parents[e.target]!.push(e.source)
-  }
-
-  const ancestors = new Set<string>()
-  const queue = [forNodeId]
-
-  while (queue.length > 0) {
-    const id = queue.shift()!
-    for (const parent of parents[id] ?? []) {
-      if (!ancestors.has(parent)) {
-        ancestors.add(parent)
-        queue.push(parent)
-      }
-    }
-  }
-
-  return ancestors
-}
-
-// ---------------------------------------------------------------------------
-// Public API
+// Main export
 // ---------------------------------------------------------------------------
 
 /**
- * Returns all variables available at `forNodeId` from upstream nodes.
- * Returns [] silently if the graph has a cycle (cycle error is reported separately
- * by _validatePipeline in pipelineStore).
+ * Returns all variables available at `forNodeId` — i.e. the combined outputs
+ * of every upstream ancestor node, ordered by topological rank.
+ *
+ * Returns `[]` silently when:
+ * - `forNodeId` is not in the graph
+ * - The graph contains a cycle (the error is already caught by `_validatePipeline`)
  */
 export function computeVariableScope(
-  nodes: CanvasNode[],
-  edges: CanvasEdge[],
+  nodes: NodeLike[],
+  edges: EdgeLike[],
   forNodeId: string,
 ): AvailableVariable[] {
-  const sorted = topoSort(nodes, edges)
-  if (!sorted) return [] // cycle — return empty without throwing
+  const nodeIds = new Set(nodes.map((n) => n.id))
 
-  const ancestors = getAncestors(edges, forNodeId)
+  if (!nodeIds.has(forNodeId)) return []
 
-  const variables: AvailableVariable[] = []
-  for (const node of sorted) {
-    if (ancestors.has(node.id)) {
-      variables.push(...getNodeOutputs(node))
+  // Build forward and reverse adjacency sets
+  const forward = new Map<string, Set<string>>()
+  const reverse = new Map<string, Set<string>>()
+
+  for (const id of nodeIds) {
+    forward.set(id, new Set())
+    reverse.set(id, new Set())
+  }
+
+  for (const edge of edges) {
+    if (!nodeIds.has(edge.source) || !nodeIds.has(edge.target)) continue
+    forward.get(edge.source)!.add(edge.target)
+    reverse.get(edge.target)!.add(edge.source)
+  }
+
+  // Kahn's topological sort — cycle detection
+  const inDegree = new Map<string, number>()
+  for (const id of nodeIds) {
+    inDegree.set(id, reverse.get(id)!.size)
+  }
+
+  const queue: string[] = []
+  for (const [id, deg] of inDegree) {
+    if (deg === 0) queue.push(id)
+  }
+
+  const topoOrder: string[] = []
+  while (queue.length > 0) {
+    const curr = queue.shift()!
+    topoOrder.push(curr)
+    for (const next of forward.get(curr)!) {
+      const newDeg = (inDegree.get(next) ?? 0) - 1
+      inDegree.set(next, newDeg)
+      if (newDeg === 0) queue.push(next)
     }
   }
 
-  return variables
+  if (topoOrder.length !== nodeIds.size) {
+    console.warn('[variableScope] Cycle detected in pipeline graph — returning empty scope')
+    return []
+  }
+
+  // BFS backwards from forNodeId to collect all ancestor node IDs
+  const ancestors = new Set<string>()
+  const visited = new Set<string>([forNodeId])
+  const bfsQueue: string[] = [forNodeId]
+
+  while (bfsQueue.length > 0) {
+    const curr = bfsQueue.shift()!
+    for (const src of reverse.get(curr)!) {
+      if (!visited.has(src)) {
+        visited.add(src)
+        ancestors.add(src)
+        bfsQueue.push(src)
+      }
+    }
+  }
+
+  // Derive outputs for each ancestor, preserving topological order
+  const nodeMap = new Map(nodes.map((n) => [n.id, n]))
+  const result: AvailableVariable[] = []
+
+  for (const id of topoOrder) {
+    if (!ancestors.has(id)) continue
+    const node = nodeMap.get(id)!
+    for (const out of deriveNodeOutputs(node)) {
+      result.push({ node_id: id, ...out })
+    }
+  }
+
+  return result
 }
 
+// ---------------------------------------------------------------------------
+// React hook
+// ---------------------------------------------------------------------------
+
 /**
- * React hook — returns upstream variables available at the given node.
+ * Returns upstream variables available at the given node.
  * Memoized against nodes and edges changes.
  */
 export function useVariableScope(nodeId: string): AvailableVariable[] {

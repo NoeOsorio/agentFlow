@@ -1,4 +1,5 @@
-// @plan B3-PR-2
+// @plan B3-PR-2 / B3-PR-3
+import { useMemo } from 'react'
 import { create } from 'zustand'
 import { applyNodeChanges } from '@xyflow/react'
 import type { Connection, NodeChange, Viewport } from '@xyflow/react'
@@ -21,6 +22,7 @@ import type {
   HistoryEntry,
 } from './types'
 import { useCompanyStore } from './companyStore'
+import { computeVariableScope, type AvailableVariable } from './variableScope'
 
 // ---------------------------------------------------------------------------
 // Constants
@@ -650,4 +652,11 @@ export function useAgentBudget(agentName: string) {
 
 export function useAgentHealth(agentName: string) {
   return useCompanyStore(s => s.agentHealth[agentName] ?? null)
+}
+
+/** @plan B3-PR-3 — Returns upstream variables available at the given node. */
+export function useVariableScope(nodeId: string): AvailableVariable[] {
+  const nodes = usePipelineStore(s => s.nodes)
+  const edges = usePipelineStore(s => s.edges)
+  return useMemo(() => computeVariableScope(nodes, edges, nodeId), [nodes, edges, nodeId])
 }

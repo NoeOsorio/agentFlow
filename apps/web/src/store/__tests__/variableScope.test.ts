@@ -1,225 +1,236 @@
-// @plan B3-PR-4
+/**
+ * @plan B3-PR-4
+ * Tests for computeVariableScope — pure function, no store dependencies.
+ */
+
 import { describe, it, expect } from 'vitest'
 import { computeVariableScope } from '../variableScope'
-import type { CanvasNode, CanvasEdge } from '../types'
+import type { AvailableVariable } from '../variableScope'
 import type { PipelineNode } from '@agentflow/core'
 
 // ---------------------------------------------------------------------------
-// Helpers
+// Test helpers
 // ---------------------------------------------------------------------------
 
-function makeNode(id: string, type: string, extra?: Record<string, unknown>): CanvasNode {
-  return {
-    id,
-    type,
-    position: { x: 0, y: 0 },
-    data: { id, type, ...extra } as unknown as PipelineNode,
-  }
+function node(id: string, data: PipelineNode) {
+  return { id, data }
 }
 
-function makeEdge(source: string, target: string): CanvasEdge {
-  return { id: `${source}->${target}`, source, target } as CanvasEdge
+function edge(source: string, target: string) {
+  return { source, target }
 }
 
 // ---------------------------------------------------------------------------
-// agent_pod outputs  (B3-PR-3)
+// Node fixtures
 // ---------------------------------------------------------------------------
 
-describe('agent_pod outputs', () => {
-  it('includes response, agent_name, and agent_role', () => {
-    const nodes: CanvasNode[] = [
-      makeNode('start', 'start', { outputs: [] }),
-      makeNode('agent1', 'agent_pod'),
-      makeNode('next', 'end', { inputs: [] }),
-    ]
-    const edges: CanvasEdge[] = [
-      makeEdge('start', 'agent1'),
-      makeEdge('agent1', 'next'),
-    ]
+const startNode = node('start_1', {
+  type: 'start',
+  id: 'start_1',
+  outputs: [
+    { key: 'user_input', type: 'string', description: 'User input text' },
+    { key: 'payload', type: 'object' },
+  ],
+})
 
-    const vars = computeVariableScope(nodes, edges, 'next')
-    const agent1Vars = vars.filter(v => v.node_id === 'agent1')
-    const names = agent1Vars.map(v => v.variable)
+const agentA = node('agent_a', {
+  type: 'agent_pod',
+  id: 'agent_a',
+  agent_ref: { name: 'alice' },
+  instruction: 'Do task A',
+})
 
-    expect(names).toContain('response')
-    expect(names).toContain('agent_name')
-    expect(names).toContain('agent_role')
-  })
+const agentB = node('agent_b', {
+  type: 'agent_pod',
+  id: 'agent_b',
+  agent_ref: { name: 'bob' },
+  instruction: 'Do task B',
+})
+
+const llmNode = node('llm_1', {
+  type: 'llm',
+  id: 'llm_1',
+  model: { provider: 'openai', model_id: 'gpt-4o' },
+  prompt: { system: 'You are helpful.', user: 'Hello' },
+})
+
+const httpNode = node('http_1', {
+  type: 'http',
+  id: 'http_1',
+  method: 'GET',
+  url: 'https://example.com/api',
+})
+
+const templateNode = node('tmpl_1', {
+  type: 'template',
+  id: 'tmpl_1',
+  template: 'Hello {{name}}',
+  inputs: [],
+})
+
+const codeNode = node('code_1', {
+  type: 'code',
+  id: 'code_1',
+  language: 'python',
+  code: 'result = x + y',
+  inputs: [],
+  outputs: [
+    { key: 'sum', type: 'number' },
+    { key: 'log', type: 'string' },
+  ],
+})
+
+const endNode = node('end_1', {
+  type: 'end',
+  id: 'end_1',
+  inputs: [],
 })
 
 // ---------------------------------------------------------------------------
-// llm outputs  (B3-PR-3)
+// Tests
 // ---------------------------------------------------------------------------
 
-describe('llm outputs', () => {
-  it('includes text and tokens_used', () => {
-    const nodes: CanvasNode[] = [
-      makeNode('start', 'start', { outputs: [] }),
-      makeNode('llm1', 'llm'),
-      makeNode('end1', 'end', { inputs: [] }),
-    ]
-    const edges: CanvasEdge[] = [makeEdge('start', 'llm1'), makeEdge('llm1', 'end1')]
-
-    const vars = computeVariableScope(nodes, edges, 'end1')
-    const llmVars = vars.filter(v => v.node_id === 'llm1').map(v => v.variable)
-
-    expect(llmVars).toContain('text')
-    expect(llmVars).toContain('tokens_used')
-  })
-})
-
-// ---------------------------------------------------------------------------
-// http outputs  (B3-PR-4)
-// ---------------------------------------------------------------------------
-
-describe('http outputs', () => {
-  it('includes status_code, body, and headers', () => {
-    const nodes: CanvasNode[] = [
-      makeNode('start', 'start', { outputs: [] }),
-      makeNode('http1', 'http'),
-      makeNode('end1', 'end', { inputs: [] }),
-    ]
-    const edges: CanvasEdge[] = [makeEdge('start', 'http1'), makeEdge('http1', 'end1')]
-
-    const vars = computeVariableScope(nodes, edges, 'end1')
-    const httpVars = vars.filter(v => v.node_id === 'http1').map(v => v.variable)
-
-    expect(httpVars).toContain('status_code')
-    expect(httpVars).toContain('body')
-    expect(httpVars).toContain('headers')
-  })
-})
-
-// ---------------------------------------------------------------------------
-// template outputs  (B3-PR-4)
-// ---------------------------------------------------------------------------
-
-describe('template outputs', () => {
-  it('includes text', () => {
-    const nodes: CanvasNode[] = [
-      makeNode('start', 'start', { outputs: [] }),
-      makeNode('tmpl1', 'template'),
-      makeNode('end1', 'end', { inputs: [] }),
-    ]
-    const edges: CanvasEdge[] = [makeEdge('start', 'tmpl1'), makeEdge('tmpl1', 'end1')]
-
-    const vars = computeVariableScope(nodes, edges, 'end1')
-    const tmplVars = vars.filter(v => v.node_id === 'tmpl1').map(v => v.variable)
-
-    expect(tmplVars).toContain('text')
-  })
-})
-
-// ---------------------------------------------------------------------------
-// start node outputs  (B3-PR-4)
-// ---------------------------------------------------------------------------
-
-describe('start node outputs', () => {
-  it('reflects the VariableDefinition[] defined in node.outputs', () => {
-    const nodes: CanvasNode[] = [
-      makeNode('start', 'start', {
-        outputs: [
-          { name: 'user_input', type: 'string' },
-          { name: 'session_id', type: 'string' },
-        ],
-      }),
-      makeNode('end1', 'end', { inputs: [] }),
-    ]
-    const edges: CanvasEdge[] = [makeEdge('start', 'end1')]
-
-    const vars = computeVariableScope(nodes, edges, 'end1')
-    const startVars = vars.filter(v => v.node_id === 'start').map(v => v.variable)
-
-    expect(startVars).toContain('user_input')
-    expect(startVars).toContain('session_id')
+describe('computeVariableScope', () => {
+  it('returns empty array when forNodeId is not in graph', () => {
+    const result = computeVariableScope([startNode], [], 'nonexistent')
+    expect(result).toEqual([])
   })
 
-  it('returns empty array when start has no outputs', () => {
-    const nodes: CanvasNode[] = [
-      makeNode('start', 'start', { outputs: [] }),
-      makeNode('end1', 'end', { inputs: [] }),
-    ]
-    const edges: CanvasEdge[] = [makeEdge('start', 'end1')]
-
-    const vars = computeVariableScope(nodes, edges, 'end1')
-    expect(vars.filter(v => v.node_id === 'start')).toHaveLength(0)
+  it('returns empty array for a node with no ancestors', () => {
+    const result = computeVariableScope([startNode, agentA], [edge('start_1', 'agent_a')], 'start_1')
+    expect(result).toEqual([])
   })
-})
 
-// ---------------------------------------------------------------------------
-// Parallel branches  (B3-PR-3)
-// ---------------------------------------------------------------------------
+  it('agent_pod outputs include response, agent_name, agent_role', () => {
+    const nodes = [startNode, agentA, endNode]
+    const edges = [edge('start_1', 'agent_a'), edge('agent_a', 'end_1')]
+    const result = computeVariableScope(nodes, edges, 'end_1')
 
-describe('parallel branches', () => {
+    const agentVars = result.filter((v: AvailableVariable) => v.node_id === 'agent_a')
+    const variables = agentVars.map((v: AvailableVariable) => v.variable)
+
+    expect(variables).toContain('response')
+    expect(variables).toContain('agent_name')
+    expect(variables).toContain('agent_role')
+  })
+
+  it('llm outputs include text and tokens_used', () => {
+    const nodes = [startNode, llmNode, endNode]
+    const edges = [edge('start_1', 'llm_1'), edge('llm_1', 'end_1')]
+    const result = computeVariableScope(nodes, edges, 'end_1')
+
+    const llmVars = result.filter((v: AvailableVariable) => v.node_id === 'llm_1')
+    const variables = llmVars.map((v: AvailableVariable) => v.variable)
+
+    expect(variables).toContain('text')
+    expect(variables).toContain('tokens_used')
+  })
+
+  it('http outputs include status_code, body, and headers', () => {
+    const nodes = [startNode, httpNode, endNode]
+    const edges = [edge('start_1', 'http_1'), edge('http_1', 'end_1')]
+    const result = computeVariableScope(nodes, edges, 'end_1')
+
+    const httpVars = result.filter((v: AvailableVariable) => v.node_id === 'http_1')
+    const variables = httpVars.map((v: AvailableVariable) => v.variable)
+
+    expect(variables).toContain('status_code')
+    expect(variables).toContain('body')
+    expect(variables).toContain('headers')
+  })
+
+  it('template outputs include text', () => {
+    const nodes = [startNode, templateNode, endNode]
+    const edges = [edge('start_1', 'tmpl_1'), edge('tmpl_1', 'end_1')]
+    const result = computeVariableScope(nodes, edges, 'end_1')
+
+    const tmplVars = result.filter((v: AvailableVariable) => v.node_id === 'tmpl_1')
+    expect(tmplVars.map((v: AvailableVariable) => v.variable)).toContain('text')
+  })
+
+  it('code outputs are derived from the node outputs array', () => {
+    const nodes = [startNode, codeNode, endNode]
+    const edges = [edge('start_1', 'code_1'), edge('code_1', 'end_1')]
+    const result = computeVariableScope(nodes, edges, 'end_1')
+
+    const codeVars = result.filter((v: AvailableVariable) => v.node_id === 'code_1')
+    const variables = codeVars.map((v: AvailableVariable) => v.variable)
+
+    expect(variables).toContain('sum')
+    expect(variables).toContain('log')
+  })
+
+  it('start node outputs are derived from its declared outputs array', () => {
+    const nodes = [startNode, agentA]
+    const edges = [edge('start_1', 'agent_a')]
+    const result = computeVariableScope(nodes, edges, 'agent_a')
+
+    const startVars = result.filter((v: AvailableVariable) => v.node_id === 'start_1')
+    const variables = startVars.map((v: AvailableVariable) => v.variable)
+
+    expect(variables).toContain('user_input')
+    expect(variables).toContain('payload')
+  })
+
   it('node C (after A and B in parallel) includes outputs from both A and B', () => {
-    // start → A
-    //       → B
-    // A, B  → C
-    const nodes: CanvasNode[] = [
-      makeNode('start', 'start', { outputs: [] }),
-      makeNode('A', 'agent_pod'),
-      makeNode('B', 'llm'),
-      makeNode('C', 'end', { inputs: [] }),
-    ]
-    const edges: CanvasEdge[] = [
-      makeEdge('start', 'A'),
-      makeEdge('start', 'B'),
-      makeEdge('A', 'C'),
-      makeEdge('B', 'C'),
+    const nodeC = node('agent_c', {
+      type: 'agent_pod',
+      id: 'agent_c',
+      agent_ref: { name: 'charlie' },
+      instruction: 'Do task C',
+    })
+
+    const nodes = [startNode, agentA, agentB, nodeC]
+    const edges = [
+      edge('start_1', 'agent_a'),
+      edge('start_1', 'agent_b'),
+      edge('agent_a', 'agent_c'),
+      edge('agent_b', 'agent_c'),
     ]
 
-    const vars = computeVariableScope(nodes, edges, 'C')
-    const nodeIds = new Set(vars.map(v => v.node_id))
+    const result = computeVariableScope(nodes, edges, 'agent_c')
 
-    expect(nodeIds.has('A')).toBe(true)
-    expect(nodeIds.has('B')).toBe(true)
+    const nodeIds = [...new Set(result.map((v: AvailableVariable) => v.node_id))]
+    expect(nodeIds).toContain('start_1')
+    expect(nodeIds).toContain('agent_a')
+    expect(nodeIds).toContain('agent_b')
+    expect(nodeIds).not.toContain('agent_c')
+
+    // Includes all 3 agent_pod variables from A
+    const aVars = result.filter((v: AvailableVariable) => v.node_id === 'agent_a')
+    expect(aVars).toHaveLength(3)
+
+    // Includes all 3 agent_pod variables from B
+    const bVars = result.filter((v: AvailableVariable) => v.node_id === 'agent_b')
+    expect(bVars).toHaveLength(3)
   })
-})
 
-// ---------------------------------------------------------------------------
-// Cycle detection  (B3-PR-3)
-// ---------------------------------------------------------------------------
+  it('returns empty array (no throw) when graph has a cycle', () => {
+    // A → B → A (cycle); use llm nodes to avoid agent_pod required fields
+    const nodeX = node('llm_x', { type: 'llm', id: 'llm_x', model: { provider: 'openai', model_id: 'gpt-4o' }, prompt: { user: 'Hi' } })
+    const nodeY = node('llm_y', { type: 'llm', id: 'llm_y', model: { provider: 'openai', model_id: 'gpt-4o' }, prompt: { user: 'Hi' } })
+    const nodes = [nodeX, nodeY]
+    const edges = [edge('llm_x', 'llm_y'), edge('llm_y', 'llm_x')]
 
-describe('cycle detection', () => {
-  it('returns [] silently when the graph has a cycle', () => {
-    const nodes: CanvasNode[] = [
-      makeNode('A', 'agent_pod'),
-      makeNode('B', 'agent_pod'),
-      makeNode('C', 'end', { inputs: [] }),
-    ]
-    // A → B → A (cycle)  and B → C
-    const edges: CanvasEdge[] = [
-      makeEdge('A', 'B'),
-      makeEdge('B', 'A'),
-      makeEdge('B', 'C'),
-    ]
-
-    expect(() => computeVariableScope(nodes, edges, 'C')).not.toThrow()
-    expect(computeVariableScope(nodes, edges, 'C')).toEqual([])
+    expect(() => computeVariableScope(nodes, edges, 'llm_x')).not.toThrow()
+    expect(computeVariableScope(nodes, edges, 'llm_x')).toEqual([])
   })
-})
 
-// ---------------------------------------------------------------------------
-// Node not reachable from start
-// ---------------------------------------------------------------------------
+  it('end node has no declared outputs and returns empty for its scope from itself', () => {
+    const result = computeVariableScope([endNode], [], 'end_1')
+    expect(result).toEqual([])
+  })
 
-describe('unreachable nodes', () => {
-  it('does not include outputs from nodes not upstream of forNodeId', () => {
-    // start → A → C
-    // B is isolated
-    const nodes: CanvasNode[] = [
-      makeNode('start', 'start', { outputs: [] }),
-      makeNode('A', 'agent_pod'),
-      makeNode('B', 'llm'),
-      makeNode('C', 'end', { inputs: [] }),
-    ]
-    const edges: CanvasEdge[] = [
-      makeEdge('start', 'A'),
-      makeEdge('A', 'C'),
-    ]
+  it('variables are returned in topological order (start before agent)', () => {
+    const nodes = [startNode, agentA, endNode]
+    const edges = [edge('start_1', 'agent_a'), edge('agent_a', 'end_1')]
+    const result = computeVariableScope(nodes, edges, 'end_1')
 
-    const vars = computeVariableScope(nodes, edges, 'C')
-    const nodeIds = new Set(vars.map(v => v.node_id))
-    expect(nodeIds.has('B')).toBe(false)
+    const nodeIdOrder = result.map((v: AvailableVariable) => v.node_id)
+    const firstStartIdx = nodeIdOrder.indexOf('start_1')
+    const firstAgentIdx = nodeIdOrder.indexOf('agent_a')
+
+    // start should appear before agent_a in the output
+    expect(firstStartIdx).toBeLessThan(firstAgentIdx)
   })
 })
