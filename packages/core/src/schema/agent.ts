@@ -1,5 +1,6 @@
 import { z } from 'zod'
-import { BaseResourceSchema, ModelConfigSchema } from './resource'
+import { BaseResourceSchema } from './resource'
+import { ModelConfigSchema } from './model'
 
 // ---------------------------------------------------------------------------
 // Agent Capabilities

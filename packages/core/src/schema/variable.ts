@@ -77,7 +77,7 @@ export function parseVariableRef(str: string): VariableReference {
  * Serializes a VariableReference back to {{#node_id.variable.path#}} format.
  */
 export function serializeVariableRef(ref: VariableReference): string {
-  const parts = [ref.node_id, ref.variable, ...(ref.path ?? [])]
+  const parts = [ref.node_id, ref.variable, ...ref.path]
   return `{{#${parts.join('.')}#}}`
 }
 

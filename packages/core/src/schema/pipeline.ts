@@ -1,14 +1,17 @@
 import { z } from 'zod'
 import { BaseResourceSchema } from './resource'
 import { CompanyReferenceSchema } from './company'
+import { NodeSchema } from './nodes'
+import { PipelineEdgeSchema } from './nodes'
 import { VariableDefinitionSchema } from './variable'
+import { CanvasMetaSchema } from './canvas'
 
 // ---------------------------------------------------------------------------
 // Trigger Config
 // ---------------------------------------------------------------------------
 
 export const TriggerConfigSchema = z.object({
-  type: z.string().describe('Trigger type, e.g. "webhook", "cron", "manual"'),
+  type: z.string().optional().describe('Trigger type, e.g. "webhook", "cron", "manual"'),
   source: z.string().optional().describe('Event source, e.g. "github", "stripe"'),
   intake: z.string().optional().describe('Intake form identifier'),
 })
@@ -42,8 +45,6 @@ export type PolicyConfig = z.infer<typeof PolicyConfigSchema>
 
 // ---------------------------------------------------------------------------
 // Pipeline Spec
-// Node/edge schemas use z.record(z.unknown()) until schema/nodes.ts is
-// defined in A1-PR-2. They will be replaced with discriminated unions then.
 // ---------------------------------------------------------------------------
 
 export const PipelineSpecSchema = z.object({
@@ -51,20 +52,14 @@ export const PipelineSpecSchema = z.object({
     'Reference to a Company resource; agents are resolved from this company',
   ),
   trigger: TriggerConfigSchema.optional(),
-  nodes: z
-    .array(z.record(z.unknown()))
-    .default([])
-    .describe('Pipeline DAG nodes (typed in A1-PR-2)'),
-  edges: z
-    .array(z.record(z.unknown()))
-    .default([])
-    .describe('Pipeline DAG edges (typed in A1-PR-2)'),
+  nodes: z.array(NodeSchema).default([]).describe('Pipeline DAG nodes'),
+  edges: z.array(PipelineEdgeSchema).default([]).describe('Pipeline DAG edges'),
   variables: z
     .array(VariableDefinitionSchema)
     .optional()
     .describe('Pipeline-level input variable declarations'),
   policy: PolicyConfigSchema.optional(),
-  canvas_meta: z.unknown().optional().describe('Canvas positional metadata (typed in A1-PR-2)'),
+  canvas_meta: CanvasMetaSchema.optional().describe('Canvas positional metadata'),
 })
 
 export type PipelineSpec = z.infer<typeof PipelineSpecSchema>
@@ -79,12 +74,9 @@ export type Pipeline = z.infer<typeof PipelineResourceSchema>
 
 // ---------------------------------------------------------------------------
 // Deprecated alias — kept so existing parser registry and tests compile.
-// Switch to PipelineResourceSchema for new code.
 // ---------------------------------------------------------------------------
 
-/**
- * @deprecated Use `PipelineResourceSchema` instead.
- */
+/** @deprecated Use `PipelineResourceSchema` instead. */
 export const PipelineSchema = PipelineResourceSchema
 
 // ---------------------------------------------------------------------------
