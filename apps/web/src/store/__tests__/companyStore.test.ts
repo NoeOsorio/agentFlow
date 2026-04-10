@@ -1,4 +1,4 @@
-// @plan B3-PR-1
+// @plan B3-PR-4
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { useCompanyStore } from '../companyStore'
 
@@ -168,5 +168,77 @@ describe('deleteAgent', () => {
     expect(company!.spec.agents[0]?.name).toBe('bob')
     expect(yamlSpec).not.toContain('alice')
     vi.useRealTimers()
+  })
+})
+
+// ---------------------------------------------------------------------------
+// refreshBudgets  (B3-PR-4)
+// ---------------------------------------------------------------------------
+
+describe('refreshBudgets', () => {
+  it('calls GET /api/companies/{id}/agents and updates agentBudgets', async () => {
+    const budgetPayload = [
+      {
+        agentName: 'alice',
+        spentUsd: 12.5,
+        budgetUsd: 100,
+        remainingUsd: 87.5,
+        pctUsed: 12.5,
+        month: '2026-04',
+      },
+    ]
+    const mockFetch = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => budgetPayload,
+    })
+    vi.stubGlobal('fetch', mockFetch)
+
+    useCompanyStore.setState({ ...initialState, companyId: 'company-abc' })
+    await useCompanyStore.getState().refreshBudgets()
+
+    expect(mockFetch).toHaveBeenCalledWith('/api/companies/company-abc/agents')
+    const { agentBudgets } = useCompanyStore.getState()
+    expect(agentBudgets['alice']).toBeDefined()
+    expect(agentBudgets['alice']!.remainingUsd).toBe(87.5)
+  })
+
+  it('does nothing when companyId is null', async () => {
+    const mockFetch = vi.fn()
+    vi.stubGlobal('fetch', mockFetch)
+
+    await useCompanyStore.getState().refreshBudgets()
+    expect(mockFetch).not.toHaveBeenCalled()
+  })
+})
+
+// ---------------------------------------------------------------------------
+// setAgentHealth  (B3-PR-4)
+// ---------------------------------------------------------------------------
+
+describe('setAgentHealth', () => {
+  it('reflects healthStatus and lastHeartbeatAt in store', () => {
+    useCompanyStore.getState().setAgentHealth('alice', {
+      agentName: 'alice',
+      healthStatus: 'dead',
+      lastHeartbeatAt: null,
+    })
+
+    const { agentHealth } = useCompanyStore.getState()
+    expect(agentHealth['alice']).toBeDefined()
+    expect(agentHealth['alice']!.healthStatus).toBe('dead')
+    expect(agentHealth['alice']!.lastHeartbeatAt).toBeNull()
+  })
+
+  it('can update to healthy status with a heartbeat timestamp', () => {
+    const now = new Date()
+    useCompanyStore.getState().setAgentHealth('alice', {
+      agentName: 'alice',
+      healthStatus: 'healthy',
+      lastHeartbeatAt: now,
+    })
+
+    const { agentHealth } = useCompanyStore.getState()
+    expect(agentHealth['alice']!.healthStatus).toBe('healthy')
+    expect(agentHealth['alice']!.lastHeartbeatAt).toBe(now)
   })
 })

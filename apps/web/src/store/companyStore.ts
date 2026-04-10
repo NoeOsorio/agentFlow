@@ -1,4 +1,4 @@
-// @plan B3-PR-1
+// @plan B3-PR-4
 import { create } from 'zustand'
 import { parseResource, serializeResource, validateResource } from '@agentflow/core'
 import type { Company, InlineAgent } from '@agentflow/core'
@@ -45,6 +45,40 @@ interface CompanyStore {
 
 let _saveTimer: ReturnType<typeof setTimeout> | null = null
 
+// ---------------------------------------------------------------------------
+// WebSocket heartbeat (module-level so it survives re-renders)
+// ---------------------------------------------------------------------------
+
+let _heartbeatWs: WebSocket | null = null
+
+function _connectHeartbeat(
+  companyId: string,
+  onMessage: (health: import('./types').AgentHealthState) => void,
+): void {
+  if (_heartbeatWs) {
+    _heartbeatWs.close()
+    _heartbeatWs = null
+  }
+  const wsUrl = `ws://localhost:8000/api/ws/companies/${companyId}/agents`
+  try {
+    const ws = new WebSocket(wsUrl)
+    _heartbeatWs = ws
+    ws.onmessage = (event: MessageEvent) => {
+      try {
+        const payload = JSON.parse(event.data as string) as import('./types').AgentHealthState
+        onMessage(payload)
+      } catch {
+        // ignore malformed messages
+      }
+    }
+    ws.onerror = () => {
+      // silently ignore — heartbeat is best-effort
+    }
+  } catch {
+    // WebSocket not available in test environment — silently ignore
+  }
+}
+
 function scheduleSave(saveFn: () => Promise<void>): void {
   if (_saveTimer) clearTimeout(_saveTimer)
   _saveTimer = setTimeout(() => {
@@ -74,6 +108,9 @@ export const useCompanyStore = create<CompanyStore>()((set, get) => ({
     const data = (await res.json()) as { yaml_spec: string }
     get().setYamlSpec(data.yaml_spec)
     set({ companyId: id })
+    _connectHeartbeat(id, (health) => {
+      get().setAgentHealth(health.agentName, health)
+    })
   },
 
   async saveCompany() {

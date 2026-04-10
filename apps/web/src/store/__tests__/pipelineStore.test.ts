@@ -1,4 +1,4 @@
-// @plan B3-PR-2
+// @plan B3-PR-4
 import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { usePipelineStore } from '../pipelineStore'
 import { useCompanyStore } from '../companyStore'
@@ -257,6 +257,64 @@ describe('pipelineStore', () => {
 
       const { yamlErrors } = usePipelineStore.getState()
       expect(yamlErrors.some(e => e.nodeId === nodeId && e.message.includes('bob'))).toBe(true)
+    })
+  })
+
+  // ---------- _validatePipeline (B3-PR-4) -----------------------------------
+
+  describe('_validatePipeline via canvas mutations', () => {
+    it('detects pipeline without a start node and adds a global error', () => {
+      // Add only an end node — no start
+      usePipelineStore.getState().addNode('end', { x: 300, y: 0 })
+      const { yamlErrors } = usePipelineStore.getState()
+      const startError = yamlErrors.find(
+        e => e.field === 'nodes' && e.message.includes('start node'),
+      )
+      expect(startError).toBeDefined()
+      expect(startError!.nodeId).toBe('')
+    })
+
+    it('detects if_else node with fewer than 2 outgoing edges and adds a node-level error', () => {
+      // Add start + end + if_else but only 1 edge out of if_else
+      usePipelineStore.getState().addNode('start', { x: 0, y: 0 })
+      usePipelineStore.getState().addNode('end', { x: 600, y: 0 })
+      usePipelineStore.getState().addNode('if_else', { x: 300, y: 0 })
+
+      const { nodes } = usePipelineStore.getState()
+      const startId = nodes.find(n => n.data.type === 'start')!.id
+      const ifElseId = nodes.find(n => n.data.type === 'if_else')!.id
+      const endId = nodes.find(n => n.data.type === 'end')!.id
+
+      // Connect start → if_else → end (only 1 outgoing edge from if_else)
+      usePipelineStore.getState().addEdge({ source: startId, target: ifElseId, sourceHandle: null, targetHandle: null })
+      usePipelineStore.getState().addEdge({ source: ifElseId, target: endId, sourceHandle: null, targetHandle: null })
+
+      const { yamlErrors } = usePipelineStore.getState()
+      const ifElseError = yamlErrors.find(
+        e => e.nodeId === ifElseId && e.field === 'edges',
+      )
+      expect(ifElseError).toBeDefined()
+      expect(ifElseError!.message).toMatch(/2 outgoing/)
+    })
+  })
+
+  // ---------- clearRunStates (B3-PR-4) --------------------------------------
+
+  describe('clearRunStates', () => {
+    it('resets nodeRunStates to empty and clears activeRunId', () => {
+      usePipelineStore.setState({
+        activeRunId: 'run-xyz',
+        nodeRunStates: {
+          'node_a': { status: 'completed' },
+          'node_b': { status: 'failed', error: 'timeout' },
+        },
+      })
+
+      usePipelineStore.getState().clearRunStates()
+
+      const { activeRunId, nodeRunStates } = usePipelineStore.getState()
+      expect(activeRunId).toBeNull()
+      expect(Object.keys(nodeRunStates)).toHaveLength(0)
     })
   })
 
