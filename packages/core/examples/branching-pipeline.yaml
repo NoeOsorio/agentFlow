@@ -1,0 +1,78 @@
+apiVersion: agentflow.ai/v1
+kind: Pipeline
+metadata:
+  name: branching-pipeline
+  namespace: default
+spec:
+  nodes:
+    - id: start
+      type: start
+      outputs:
+        - key: score
+          type: number
+          required: true
+
+    - id: llm_eval
+      type: llm
+      model:
+        provider: anthropic
+        model_id: claude-haiku-4-5-20251001
+      prompt:
+        user: "Evaluate the following score: {{#start.score#}}"
+
+    - id: router
+      type: if_else
+      conditions:
+        - logic: and
+          branch_id: branch_true
+          conditions:
+            - left:
+                node_id: start
+                variable: score
+              operator: gte
+              right:
+                literal: 0.8
+              branch_id: branch_true
+      default_branch: branch_false
+
+    - id: template_pass
+      type: template
+      template: "Score passed quality check."
+      inputs:
+        - node_id: start
+          variable: score
+
+    - id: template_fail
+      type: template
+      template: "Score failed quality check. Review needed."
+      inputs:
+        - node_id: start
+          variable: score
+
+    - id: end
+      type: end
+      inputs: []
+
+  edges:
+    - id: edge-start-eval
+      source: start
+      target: llm_eval
+    - id: edge-eval-router
+      source: llm_eval
+      target: router
+    - id: edge-router-pass
+      source: router
+      target: template_pass
+      source_handle: branch_true
+      condition_branch: branch_true
+    - id: edge-router-fail
+      source: router
+      target: template_fail
+      source_handle: branch_false
+      condition_branch: branch_false
+    - id: edge-pass-end
+      source: template_pass
+      target: end
+    - id: edge-fail-end
+      source: template_fail
+      target: end

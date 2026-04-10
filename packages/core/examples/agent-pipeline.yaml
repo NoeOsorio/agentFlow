@@ -1,28 +1,4 @@
 apiVersion: agentflow.ai/v1
-kind: Company
-metadata:
-  name: acme-corp
-  namespace: default
-spec:
-  description: "Acme Corp engineering org"
-  policy:
-    max_monthly_budget_usd: 500
-  agents:
-    - name: bob
-      role: CEO
-      model:
-        provider: anthropic
-        model_id: claude-opus-4-6
-      capabilities: [planning, management]
-    - name: alice
-      role: Lead Engineer
-      model:
-        provider: anthropic
-        model_id: claude-sonnet-4-6
-      capabilities: [coding, review]
-      reports_to: bob
----
-apiVersion: agentflow.ai/v1
 kind: Pipeline
 metadata:
   name: feature-development
@@ -33,9 +9,7 @@ spec:
   company_ref:
     name: acme-corp
     namespace: default
-  trigger:
-    type: webhook
-    source: github
+
   nodes:
     - id: start
       type: start
@@ -43,21 +17,27 @@ spec:
         - key: feature_description
           type: string
           required: true
+
     - id: plan
       type: agent_pod
       agent_ref:
         name: alice
+        namespace: default
       instruction: "Plan the implementation for: {{#start.feature_description#}}"
+
     - id: implement
       type: agent_pod
       agent_ref:
         name: alice
+        namespace: default
       instruction: "Implement the plan: {{#plan.output#}}"
+
     - id: end
       type: end
       inputs:
         - node_id: implement
           variable: output
+
   edges:
     - id: edge-start-plan
       source: start

@@ -1,0 +1,36 @@
+apiVersion: agentflow.ai/v1
+kind: Pipeline
+metadata:
+  name: simple-llm-pipeline
+  namespace: default
+spec:
+  nodes:
+    - id: start
+      type: start
+      outputs:
+        - key: user_prompt
+          type: string
+          required: true
+
+    - id: llm_1
+      type: llm
+      model:
+        provider: anthropic
+        model_id: claude-sonnet-4-6
+        temperature: 0.7
+      prompt:
+        user: "{{#start.user_prompt#}}"
+
+    - id: end
+      type: end
+      inputs:
+        - node_id: llm_1
+          variable: output
+
+  edges:
+    - id: edge-start-llm
+      source: start
+      target: llm_1
+    - id: edge-llm-end
+      source: llm_1
+      target: end
