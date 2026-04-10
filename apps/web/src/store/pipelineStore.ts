@@ -8,13 +8,14 @@ import {
   serializeResource,
   validateResource,
   type Pipeline,
+  type PipelineNode,
+  type PipelineEdge,
   type CompanyReference,
   type NodePosition,
 } from '@agentflow/core'
 import type {
   CanvasNode,
   CanvasEdge,
-  CanvasNodeData,
   NodeValidationError,
   NodeRunState,
   HistoryEntry,
@@ -35,44 +36,80 @@ const API_VERSION = 'agentflow.ai/v1' as const
 // Default node data by type
 // ---------------------------------------------------------------------------
 
-function buildDefaultNodeData(type: string, id: string): CanvasNodeData {
-  const base = { id, type }
+function buildDefaultNodeData(type: string, id: string): PipelineNode {
+  const base = { id }
   switch (type) {
     case 'start':
-      return { ...base, outputs: [] }
+      return { ...base, type: 'start', outputs: [] }
     case 'end':
-      return { ...base, inputs: [] }
+      return { ...base, type: 'end', inputs: [] }
     case 'agent_pod':
-      // agent_ref intentionally null until user selects one in ConfigPanel
-      return { ...base, agent_ref: null, instruction: '' }
+      // agent_ref is intentionally cast — user must select one via ConfigPanel.
+      // The node will show a validation error until agent_ref is filled in.
+      return {
+        ...base,
+        type: 'agent_pod',
+        agent_ref: null as unknown as PipelineNode & { type: 'agent_pod' } extends { agent_ref: infer R } ? R : never,
+        instruction: '',
+      } as unknown as PipelineNode
     case 'llm':
       return {
         ...base,
-        model: { provider: 'openai', name: 'gpt-4o' },
-        prompt: { template: '' },
+        type: 'llm',
+        model: { provider: 'openai' as const, model_id: 'gpt-4o' },
+        prompt: { user: '' },
       }
     case 'code':
-      return { ...base, language: 'python', code: '', inputs: [], outputs: [] }
+      return {
+        ...base,
+        type: 'code',
+        language: 'python' as const,
+        code: '',
+        inputs: [],
+        outputs: [],
+      }
     case 'http':
-      return { ...base, method: 'GET', url: '' }
+      return { ...base, type: 'http', method: 'GET' as const, url: '' }
     case 'if_else':
-      return { ...base, conditions: [], default_branch: '' }
+      return { ...base, type: 'if_else', conditions: [], default_branch: '' }
     case 'template':
-      return { ...base, template: '', inputs: [] }
+      return { ...base, type: 'template', template: '', inputs: [] }
     case 'variable_assigner':
-      return { ...base, assignments: [] }
+      return { ...base, type: 'variable_assigner', assignments: [] }
     case 'variable_aggregator':
-      return { ...base, branches: [], output_key: 'result', strategy: 'first' }
+      return {
+        ...base,
+        type: 'variable_aggregator',
+        branches: [],
+        output_key: 'result',
+        strategy: 'first' as const,
+      }
     case 'iteration':
-      return { ...base, input_list: { node_id: '', variable: '', path: [] }, iterator_var: 'item', body_nodes: [] }
+      return {
+        ...base,
+        type: 'iteration',
+        input_list: { node_id: '', variable: '', path: [] },
+        iterator_var: 'item',
+        body_nodes: [],
+      }
     case 'human_input':
-      return { ...base, prompt: '', fallback: 'skip' }
+      return { ...base, type: 'human_input', prompt: '', fallback: 'skip' as const }
     case 'knowledge_retrieval':
-      return { ...base, query: { node_id: '', variable: '', path: [] }, knowledge_base_id: '' }
+      return {
+        ...base,
+        type: 'knowledge_retrieval',
+        query: { node_id: '', variable: '', path: [] },
+        knowledge_base_id: '',
+      }
     case 'sub_workflow':
-      return { ...base, pipeline_ref: { name: '' }, inputs: {} }
+      return {
+        ...base,
+        type: 'sub_workflow',
+        pipeline_ref: { name: '' },
+        inputs: {},
+      }
     default:
-      return base
+      return { ...base, type: 'start', outputs: [] }
   }
 }
 
@@ -80,10 +117,7 @@ function buildDefaultNodeData(type: string, id: string): CanvasNodeData {
 // Cycle detection (DFS on adjacency list)
 // ---------------------------------------------------------------------------
 
-function hasCycle(
-  nodes: CanvasNode[],
-  edges: CanvasEdge[],
-): boolean {
+function hasCycle(nodes: CanvasNode[], edges: CanvasEdge[]): boolean {
   const adj: Record<string, string[]> = {}
   for (const n of nodes) adj[n.id] = []
   for (const e of edges) {
@@ -146,7 +180,7 @@ interface PipelineStoreState {
 
 interface PipelineStoreActions {
   addNode(type: string, position: NodePosition): void
-  updateNodeConfig(nodeId: string, patch: Partial<CanvasNodeData>): void
+  updateNodeConfig(nodeId: string, patch: Partial<PipelineNode>): void
   deleteNode(nodeId: string): void
   addEdge(connection: Connection): void
   deleteEdge(edgeId: string): void
@@ -212,7 +246,11 @@ export const usePipelineStore = create<PipelineStore>()((set, get) => {
     const endNodes = nodes.filter(n => n.data.type === 'end')
 
     if (startNodes.length !== 1) {
-      errors.push({ nodeId: '', field: 'nodes', message: `Pipeline must have exactly one start node (found ${startNodes.length})` })
+      errors.push({
+        nodeId: '',
+        field: 'nodes',
+        message: `Pipeline must have exactly one start node (found ${startNodes.length})`,
+      })
     }
     if (endNodes.length < 1) {
       errors.push({ nodeId: '', field: 'nodes', message: 'Pipeline must have at least one end node' })
@@ -222,12 +260,16 @@ export const usePipelineStore = create<PipelineStore>()((set, get) => {
       errors.push({ nodeId: '', field: 'edges', message: 'Pipeline DAG contains a cycle' })
     }
 
-    // if_else: must have ≥ 2 outgoing edges
+    // if_else nodes must have ≥ 2 outgoing edges
     for (const n of nodes) {
       if (n.data.type === 'if_else') {
         const outgoing = edges.filter(e => e.source === n.id).length
         if (outgoing < 2) {
-          errors.push({ nodeId: n.id, field: 'edges', message: 'if_else node must have at least 2 outgoing edges' })
+          errors.push({
+            nodeId: n.id,
+            field: 'edges',
+            message: 'if_else node must have at least 2 outgoing edges',
+          })
         }
       }
     }
@@ -238,11 +280,15 @@ export const usePipelineStore = create<PipelineStore>()((set, get) => {
       const agentNames = new Set(company.spec.agents.map(a => a.name))
       for (const n of nodes) {
         if (n.data.type === 'agent_pod') {
-          const agentRef = n.data.agent_ref as { name?: string } | null
+          const agentRef = (n.data as { agent_ref?: { name?: string } | null }).agent_ref
           if (!agentRef || !agentRef.name) {
             errors.push({ nodeId: n.id, field: 'agent_ref', message: 'agent_pod node has no agent_ref selected' })
           } else if (!agentNames.has(agentRef.name)) {
-            errors.push({ nodeId: n.id, field: 'agent_ref', message: `Agent "${agentRef.name}" not found in company "${company.metadata.name}"` })
+            errors.push({
+              nodeId: n.id,
+              field: 'agent_ref',
+              message: `Agent "${agentRef.name}" not found in company "${company.metadata.name}"`,
+            })
           }
         }
       }
@@ -285,9 +331,6 @@ export const usePipelineStore = create<PipelineStore>()((set, get) => {
       },
     }
 
-    // Serialize — use js-yaml via serializeResource (cast through BaseResource)
-    // The Pipeline spec nodes are z.array(z.record(z.unknown())) so any
-    // Record<string, unknown>[] will pass schema validation.
     const yamlText = serializeResource(pipelineObj as Parameters<typeof serializeResource>[0])
     const validation = validateResource(yamlText)
     const additionalErrors = _validatePipeline(nodes, edges)
@@ -338,12 +381,7 @@ export const usePipelineStore = create<PipelineStore>()((set, get) => {
     addNode(type, position) {
       const id = `${type}_${nanoid(6)}`
       const data = buildDefaultNodeData(type, id)
-      const newNode: CanvasNode = {
-        id,
-        type,
-        position,
-        data,
-      }
+      const newNode: CanvasNode = { id, type, position, data }
       set(s => ({ nodes: [...s.nodes, newNode] }))
       _pushHistory()
       _syncNodesToYaml()
@@ -352,7 +390,7 @@ export const usePipelineStore = create<PipelineStore>()((set, get) => {
     updateNodeConfig(nodeId, patch) {
       set(s => ({
         nodes: s.nodes.map(n =>
-          n.id === nodeId ? { ...n, data: { ...n.data, ...patch } } : n,
+          n.id === nodeId ? { ...n, data: { ...n.data, ...patch } as PipelineNode } : n,
         ),
       }))
       _syncNodesToYaml()
@@ -377,7 +415,7 @@ export const usePipelineStore = create<PipelineStore>()((set, get) => {
         target: connection.target,
         sourceHandle: connection.sourceHandle ?? undefined,
         targetHandle: connection.targetHandle ?? undefined,
-        data: {},
+        data: undefined,
       }
       set(s => ({ edges: [...s.edges, newEdge] }))
       _syncNodesToYaml()
@@ -390,7 +428,12 @@ export const usePipelineStore = create<PipelineStore>()((set, get) => {
 
     updateNodePositions(changes) {
       set(s => ({
-        nodes: applyNodeChanges(changes, s.nodes as Parameters<typeof applyNodeChanges>[1]) as CanvasNode[],
+        // applyNodeChanges expects Node<NodeBase>; cast through unknown for
+        // compatibility with our strongly-typed CanvasNode generic.
+        nodes: applyNodeChanges(
+          changes as unknown as NodeChange[],
+          s.nodes as unknown as Parameters<typeof applyNodeChanges>[1],
+        ) as unknown as CanvasNode[],
       }))
     },
 
@@ -411,7 +454,6 @@ export const usePipelineStore = create<PipelineStore>()((set, get) => {
 
     setCompanyRef(ref) {
       set({ companyRef: ref })
-      // Validate existing agent_pod nodes against the new company ref
       const { nodes, edges } = get()
       const errors = _validatePipeline(nodes, edges)
       set({ yamlErrors: errors })
@@ -436,7 +478,9 @@ export const usePipelineStore = create<PipelineStore>()((set, get) => {
       set({ _isSyncing: true })
 
       const pipeline = result.data as Pipeline
-      const canvasMeta = pipeline.spec.canvas_meta as { viewport?: Viewport; node_positions?: Record<string, NodePosition> } | undefined
+      const canvasMeta = pipeline.spec.canvas_meta as
+        | { viewport?: Viewport; node_positions?: Record<string, NodePosition> }
+        | undefined
       const nodePositions = canvasMeta?.node_positions ?? {}
 
       const rawNodes = (pipeline.spec.nodes as Record<string, unknown>[]) ?? []
@@ -450,7 +494,7 @@ export const usePipelineStore = create<PipelineStore>()((set, get) => {
           id,
           type,
           position: { x: pos.x, y: pos.y },
-          data: { ...n, type } as CanvasNodeData,
+          data: n as unknown as PipelineNode,
         }
       })
 
@@ -461,10 +505,10 @@ export const usePipelineStore = create<PipelineStore>()((set, get) => {
         sourceHandle: e.source_handle ? String(e.source_handle) : undefined,
         targetHandle: e.target_handle ? String(e.target_handle) : undefined,
         label: e.label ? String(e.label) : undefined,
-        data: { condition_branch: e.condition_branch },
+        data: { condition_branch: e.condition_branch } as unknown as PipelineEdge,
       }))
 
-      const companyRef = pipeline.spec.company_ref ?? null
+      const companyRef = (pipeline.spec.company_ref as CompanyReference | undefined) ?? null
       const viewport = canvasMeta?.viewport ?? get().viewport
 
       set({
@@ -518,7 +562,7 @@ export const usePipelineStore = create<PipelineStore>()((set, get) => {
         historyIndex: newIndex,
         canUndo: newIndex > 0,
         canRedo: true,
-        _isSyncing: true, // prevent re-sync while restoring
+        _isSyncing: true,
       })
       set({ _isSyncing: false })
     },

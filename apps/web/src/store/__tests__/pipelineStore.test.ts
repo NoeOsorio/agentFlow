@@ -31,7 +31,7 @@ function resetStore() {
     nodeRunStates: {},
     _isSyncing: false,
   })
-  useCompanyStore.setState({ company: null, agentBudgets: {}, agentHealth: {} })
+  useCompanyStore.setState(s => ({ ...s, company: null, agentBudgets: {}, agentHealth: {} }))
 }
 
 const VALID_PIPELINE_YAML = `
@@ -90,7 +90,7 @@ describe('pipelineStore', () => {
       const node = nodes[0]!
       expect(node.id).toMatch(/^agent_pod_/)
       expect(node.data.type).toBe('agent_pod')
-      expect(node.data.agent_ref).toBeNull()
+      expect((node.data as { agent_ref: unknown }).agent_ref).toBeNull()
       expect(node.position).toEqual({ x: 100, y: 200 })
     })
 
@@ -98,7 +98,7 @@ describe('pipelineStore', () => {
       usePipelineStore.getState().addNode('start', { x: 0, y: 0 })
       const { nodes } = usePipelineStore.getState()
       expect(nodes[0]?.data.type).toBe('start')
-      expect(nodes[0]?.data.outputs).toEqual([])
+      expect((nodes[0]?.data as { outputs: unknown[] } | undefined)?.outputs).toEqual([])
     })
 
     it('pushes history after adding a node', () => {

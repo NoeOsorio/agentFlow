@@ -1,23 +1,19 @@
-// @plan B3-PR-1 (shared types — required by pipelineStore and companyStore)
+// @plan B3-PR-1
 import type { Node, Edge } from '@xyflow/react'
-import type { NodePosition } from '@agentflow/core'
+import type { PipelineNode, PipelineEdge } from '@agentflow/core'
 
 // ---------------------------------------------------------------------------
-// Canvas Node / Edge — XYFlow wrappers over pipeline data
+// Canvas Node / Edge (React Flow wrappers around core types)
 // ---------------------------------------------------------------------------
 
-// The data field holds the raw pipeline node spec (typed as a generic record
-// so that draft nodes with incomplete fields can live in the canvas before
-// validation forces them to be complete PipelineNode objects).
-export type CanvasNodeData = Record<string, unknown> & { type: string }
-export type CanvasNode = Node<CanvasNodeData> & { position: NodePosition }
-export type CanvasEdge = Edge<Record<string, unknown>>
+export type CanvasNode = Node<PipelineNode>
+export type CanvasEdge = Edge<PipelineEdge>
 
 // ---------------------------------------------------------------------------
 // Validation
 // ---------------------------------------------------------------------------
 
-export interface NodeValidationError {
+export type NodeValidationError = {
   nodeId: string
   field: string
   message: string
@@ -29,21 +25,23 @@ export interface NodeValidationError {
 
 export type NodeRunStatus = 'idle' | 'running' | 'completed' | 'failed' | 'skipped'
 
-export interface NodeRunState {
+export type NodeRunState = {
   status: NodeRunStatus
-  startedAt?: Date
-  finishedAt?: Date
+  startedAt?: number
+  finishedAt?: number
   tokensUsed?: number
   costUsd?: number
+  agentName?: string
+  agentRole?: string
   output?: unknown
   error?: string
 }
 
 // ---------------------------------------------------------------------------
-// Agent Budget / Health (populated from API in CompanyStore)
+// Agent Live State (populated from API / WebSocket)
 // ---------------------------------------------------------------------------
 
-export interface AgentBudgetState {
+export type AgentBudgetState = {
   agentName: string
   spentUsd: number
   budgetUsd: number
@@ -52,17 +50,17 @@ export interface AgentBudgetState {
   month: string
 }
 
-export interface AgentHealthState {
+export type AgentHealthState = {
   agentName: string
   healthStatus: 'healthy' | 'degraded' | 'dead' | 'unknown'
   lastHeartbeatAt: Date | null
 }
 
 // ---------------------------------------------------------------------------
-// Undo / Redo History Entry
+// Undo/Redo History Entry (pipeline store)
 // ---------------------------------------------------------------------------
 
-export interface HistoryEntry {
+export type HistoryEntry = {
   nodes: CanvasNode[]
   edges: CanvasEdge[]
   yamlSpec: string
