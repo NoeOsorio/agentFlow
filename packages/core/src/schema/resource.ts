@@ -1,5 +1,7 @@
 import { z } from 'zod'
 import yaml from 'js-yaml'
+export type { ModelConfig, ModelProvider } from './model'
+export { ModelProviderSchema, ModelConfigSchema } from './model'
 
 // ---------------------------------------------------------------------------
 // API Version
@@ -49,19 +51,6 @@ export type BaseResource<TKind extends string = string, TSpec = unknown> = {
   metadata: ResourceMetadata
   spec: TSpec
 }
-
-// ---------------------------------------------------------------------------
-// Model Config (shared across Agent and Company)
-// ---------------------------------------------------------------------------
-
-export const ModelConfigSchema = z.object({
-  provider: z.string(),
-  model_id: z.string(),
-  temperature: z.number().min(0).max(2).optional(),
-  max_tokens: z.number().int().positive().optional(),
-})
-
-export type ModelConfig = z.infer<typeof ModelConfigSchema>
 
 // ---------------------------------------------------------------------------
 // Multi-Document YAML Utilities
