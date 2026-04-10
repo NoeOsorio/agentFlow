@@ -1,5 +1,7 @@
 export * from './schema/resource'
+export * from './schema/model'
 export * from './schema/agent'
 export * from './schema/company'
 export * from './schema/pipeline'
+export * from './schema/variable'
 export * from './parser/index'
