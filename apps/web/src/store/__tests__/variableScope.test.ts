@@ -1,5 +1,5 @@
 /**
- * @plan B3-PR-3
+ * @plan B3-PR-4
  * Tests for computeVariableScope — pure function, no store dependencies.
  */
 

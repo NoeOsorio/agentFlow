@@ -1,11 +1,13 @@
 /**
- * @plan B3-PR-3
+ * @plan B3-PR-4
  * computeVariableScope — pure function: topological sort + upstream variable derivation.
  * No side effects, no store imports; testable in isolation.
  */
 
+import { useMemo } from 'react'
 import type { PipelineNode } from '@agentflow/core'
 import type { VariableType } from '@agentflow/core'
+import { usePipelineStore } from './pipelineStore'
 
 // ---------------------------------------------------------------------------
 // Public types
@@ -176,4 +178,18 @@ export function computeVariableScope(
   }
 
   return result
+}
+
+// ---------------------------------------------------------------------------
+// React hook
+// ---------------------------------------------------------------------------
+
+/**
+ * Returns upstream variables available at the given node.
+ * Memoized against nodes and edges changes.
+ */
+export function useVariableScope(nodeId: string): AvailableVariable[] {
+  const nodes = usePipelineStore(s => s.nodes)
+  const edges = usePipelineStore(s => s.edges)
+  return useMemo(() => computeVariableScope(nodes, edges, nodeId), [nodes, edges, nodeId])
 }
