@@ -1,54 +1,183 @@
-/**
- * @plan B3-PR-1
- * CompanyStore — Zustand store for company/agent state.
- * Hooks useAgentBudget and useAgentHealth are part of B3-PR-3.
- */
-
+// @plan B3-PR-1
 import { create } from 'zustand'
+import { parseResource, serializeResource, validateResource } from '@agentflow/core'
+import type { Company, InlineAgent } from '@agentflow/core'
 import type { AgentBudgetState, AgentHealthState } from './types'
 
 // ---------------------------------------------------------------------------
 // State shape
 // ---------------------------------------------------------------------------
 
-interface CompanyStoreState {
+type SaveStatus = 'idle' | 'saving' | 'saved' | 'error'
+
+interface CompanyStore {
+  // Company metadata
   companyId: string | null
   companyName: string
   namespace: string
-  saveStatus: 'idle' | 'saving' | 'saved' | 'error'
+  company: Company | null
+  saveStatus: SaveStatus
+
+  // YAML state
   yamlSpec: string
   yamlValid: boolean
   yamlErrors: string[]
+
+  // Live agent state (populated from API / WebSocket)
   agentBudgets: Record<string, AgentBudgetState>
   agentHealth: Record<string, AgentHealthState>
+
+  // Actions
+  loadCompany(id: string): Promise<void>
+  saveCompany(): Promise<void>
+  setYamlSpec(yaml: string): void
+  addAgent(agent: InlineAgent): void
+  updateAgent(agentName: string, patch: Partial<InlineAgent>): void
+  deleteAgent(agentName: string): void
+  setAgentBudget(agentName: string, budget: AgentBudgetState): void
+  setAgentHealth(agentName: string, health: AgentHealthState): void
+  refreshBudgets(): Promise<void>
+}
+
+// ---------------------------------------------------------------------------
+// Debounced auto-save (500 ms)
+// ---------------------------------------------------------------------------
+
+let _saveTimer: ReturnType<typeof setTimeout> | null = null
+
+function scheduleSave(saveFn: () => Promise<void>): void {
+  if (_saveTimer) clearTimeout(_saveTimer)
+  _saveTimer = setTimeout(() => {
+    saveFn()
+  }, 500)
 }
 
 // ---------------------------------------------------------------------------
 // Store
 // ---------------------------------------------------------------------------
 
-export const useCompanyStore = create<CompanyStoreState>(() => ({
+export const useCompanyStore = create<CompanyStore>()((set, get) => ({
   companyId: null,
   companyName: '',
   namespace: 'default',
+  company: null,
   saveStatus: 'idle',
   yamlSpec: '',
-  yamlValid: true,
+  yamlValid: false,
   yamlErrors: [],
   agentBudgets: {},
   agentHealth: {},
+
+  async loadCompany(id) {
+    const res = await fetch(`/api/companies/${id}`)
+    if (!res.ok) throw new Error(`Failed to load company: ${res.status}`)
+    const data = (await res.json()) as { yaml_spec: string }
+    get().setYamlSpec(data.yaml_spec)
+    set({ companyId: id })
+  },
+
+  async saveCompany() {
+    const { companyId, yamlSpec } = get()
+    if (!companyId) return
+    set({ saveStatus: 'saving' })
+    try {
+      const res = await fetch(`/api/companies/${companyId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ yaml_spec: yamlSpec }),
+      })
+      if (!res.ok) throw new Error(`Save failed: ${res.status}`)
+      set({ saveStatus: 'saved' })
+    } catch {
+      set({ saveStatus: 'error' })
+    }
+  },
+
+  setYamlSpec(yaml) {
+    const result = validateResource(yaml)
+    if (!result.success) {
+      const messages =
+        'errors' in result.error
+          ? result.error.errors.map((e: { message: string }) => e.message)
+          : [result.error.message]
+      // Preserve existing company — invalid YAML doesn't wipe valid state
+      set({ yamlSpec: yaml, yamlValid: false, yamlErrors: messages })
+      return
+    }
+    const company = parseResource(yaml) as Company
+    set({
+      yamlSpec: yaml,
+      yamlValid: true,
+      yamlErrors: [],
+      company,
+      companyName: company.metadata.name,
+      namespace: company.metadata.namespace ?? 'default',
+    })
+  },
+
+  addAgent(agent) {
+    const { company } = get()
+    if (!company) return
+    const updated: Company = {
+      ...company,
+      spec: { ...company.spec, agents: [...company.spec.agents, agent] },
+    }
+    const yaml = serializeResource(updated)
+    set({ company: updated, yamlSpec: yaml })
+    scheduleSave(get().saveCompany)
+  },
+
+  updateAgent(agentName, patch) {
+    const { company } = get()
+    if (!company) return
+    const updated: Company = {
+      ...company,
+      spec: {
+        ...company.spec,
+        agents: company.spec.agents.map((a) =>
+          a.name === agentName ? { ...a, ...patch } : a,
+        ),
+      },
+    }
+    const yaml = serializeResource(updated)
+    set({ company: updated, yamlSpec: yaml })
+    scheduleSave(get().saveCompany)
+  },
+
+  deleteAgent(agentName) {
+    const { company } = get()
+    if (!company) return
+    // TODO(B3-PR-2): warn if agentName is referenced in pipelineStore agent_pod nodes
+    const updated: Company = {
+      ...company,
+      spec: {
+        ...company.spec,
+        agents: company.spec.agents.filter((a) => a.name !== agentName),
+      },
+    }
+    const yaml = serializeResource(updated)
+    set({ company: updated, yamlSpec: yaml })
+    scheduleSave(get().saveCompany)
+  },
+
+  setAgentBudget(agentName, budget) {
+    set((state) => ({ agentBudgets: { ...state.agentBudgets, [agentName]: budget } }))
+  },
+
+  setAgentHealth(agentName, health) {
+    set((state) => ({ agentHealth: { ...state.agentHealth, [agentName]: health } }))
+  },
+
+  async refreshBudgets() {
+    const { companyId } = get()
+    if (!companyId) return
+    const res = await fetch(`/api/companies/${companyId}/agents`)
+    if (!res.ok) return
+    const data = (await res.json()) as AgentBudgetState[]
+    const budgets: Record<string, AgentBudgetState> = {}
+    for (const b of data) {
+      budgets[b.agentName] = b
+    }
+    set({ agentBudgets: budgets })
+  },
 }))
-
-// ---------------------------------------------------------------------------
-// Hooks (B3-PR-3)
-// ---------------------------------------------------------------------------
-
-/** Returns the live budget state for a named agent, or undefined if not loaded. */
-export function useAgentBudget(agentName: string): AgentBudgetState | undefined {
-  return useCompanyStore((s) => s.agentBudgets[agentName])
-}
-
-/** Returns the live health state for a named agent, or undefined if not loaded. */
-export function useAgentHealth(agentName: string): AgentHealthState | undefined {
-  return useCompanyStore((s) => s.agentHealth[agentName])
-}
