@@ -199,7 +199,8 @@ interface PipelineStoreActions {
   undo(): void
   redo(): void
   savePipeline(): Promise<void>
-  loadPipeline(id: string): Promise<void>
+  /** `pipelineName` is `/api/pipelines/{name}` (not UUID). */
+  loadPipeline(pipelineName: string): Promise<void>
   setActiveRun(runId: string | null): void
   updateNodeRunState(nodeId: string, state: Partial<NodeRunState>): void
   clearRunStates(): void
@@ -589,14 +590,14 @@ export const usePipelineStore = create<PipelineStore>()((set, get) => {
     // ---- Persistence ------------------------------------------------------
 
     async savePipeline() {
-      const { pipelineId, yamlSpec } = get()
-      if (!pipelineId) return
+      const { yamlSpec } = get()
+      if (!yamlSpec.trim()) return
       set({ saveStatus: 'saving' })
       try {
-        const res = await fetch(`/api/pipelines/${pipelineId}`, {
-          method: 'PUT',
+        const res = await fetch('/api/apply', {
+          method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ yaml_spec: yamlSpec }),
+          body: JSON.stringify({ yaml_content: yamlSpec }),
         })
         if (!res.ok) throw new Error(`HTTP ${res.status}`)
         set({ saveStatus: 'saved' })
@@ -605,15 +606,15 @@ export const usePipelineStore = create<PipelineStore>()((set, get) => {
       }
     },
 
-    async loadPipeline(id) {
-      set({ pipelineId: id })
+    async loadPipeline(pipelineName) {
       try {
-        const res = await fetch(`/api/pipelines/${id}`)
+        const res = await fetch(`/api/pipelines/${encodeURIComponent(pipelineName)}`)
         if (!res.ok) throw new Error(`HTTP ${res.status}`)
-        const data = (await res.json()) as { yaml_spec: string; name?: string }
+        const data = (await res.json()) as { yaml_spec: string; id: string }
         get().setYamlSpec(data.yaml_spec)
+        set({ pipelineId: data.id, saveStatus: 'idle' })
       } catch {
-        set({ saveStatus: 'error' })
+        set({ saveStatus: 'error', pipelineId: null })
       }
     },
 

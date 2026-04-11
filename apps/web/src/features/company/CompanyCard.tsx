@@ -14,7 +14,8 @@ export interface CompanyListItem {
 
 interface CompanyCardProps {
   company: CompanyListItem
-  onDelete: (id: string) => void
+  /** Company resource name (API path segment), not UUID. */
+  onDelete: (name: string) => void
 }
 
 function formatDate(iso: string): string {
@@ -34,7 +35,7 @@ export default function CompanyCard({ company, onDelete }: CompanyCardProps) {
 
   function handleDelete() {
     if (window.confirm(`Delete "${company.name}"? This cannot be undone.`)) {
-      onDelete(company.id)
+      onDelete(company.name)
     }
   }
 
@@ -77,7 +78,7 @@ export default function CompanyCard({ company, onDelete }: CompanyCardProps) {
 
       <div className="flex gap-2 pt-1 border-t border-gray-800">
         <button
-          onClick={() => navigate(`/companies/${company.id}`)}
+          onClick={() => navigate(`/companies/${encodeURIComponent(company.name)}`)}
           className="flex-1 bg-indigo-600 hover:bg-indigo-500 text-white text-sm font-medium py-1.5 rounded-lg transition-colors"
         >
           Open

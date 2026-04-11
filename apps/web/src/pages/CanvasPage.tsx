@@ -7,8 +7,9 @@ import { CanvasEditor } from '../features/canvas/CanvasEditor'
 import { NodePalette } from '../features/canvas/NodePalette'
 
 export default function CanvasPage() {
-  const { id } = useParams()
-  const [loading, setLoading] = useState(!!id)
+  const { pipelineName: pipelineNameParam } = useParams<{ pipelineName?: string }>()
+  const pipelineResourceName = pipelineNameParam ? decodeURIComponent(pipelineNameParam) : undefined
+  const [loading, setLoading] = useState(!!pipelineResourceName)
 
   const loadPipeline = usePipelineStore(s => s.loadPipeline)
   const saveStatus = usePipelineStore(s => s.saveStatus)
@@ -17,10 +18,10 @@ export default function CanvasPage() {
   const loadCompany = useCompanyStore(s => s.loadCompany)
 
   useEffect(() => {
-    if (!id) return
+    if (!pipelineResourceName) return
     setLoading(true)
-    loadPipeline(id).finally(() => setLoading(false))
-  }, [id, loadPipeline])
+    loadPipeline(pipelineResourceName).finally(() => setLoading(false))
+  }, [pipelineResourceName, loadPipeline])
 
   useEffect(() => {
     if (companyRef) {
@@ -46,7 +47,8 @@ export default function CanvasPage() {
         <div className="space-y-2 text-center">
           <p className="text-lg font-semibold text-red-400">Pipeline not found</p>
           <p className="text-sm text-gray-400">
-            Could not load pipeline{id ? ` "${id}"` : ''}.
+            Could not load pipeline
+            {pipelineResourceName ? ` "${pipelineResourceName}"` : ''}.
           </p>
           <Link to="/pipelines" className="text-sm text-blue-400 hover:underline">
             ← Back to pipelines

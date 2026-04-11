@@ -11,12 +11,12 @@ export default function App() {
     <Routes>
       <Route path="/" element={<Navigate to="/pipelines" replace />} />
       <Route path="/pipelines" element={<PipelinesPage />} />
-      <Route path="/canvas/:id" element={<CanvasPage />} />
       <Route path="/canvas/new" element={<CanvasPage />} />
+      <Route path="/canvas/:pipelineName" element={<CanvasPage />} />
       <Route path="/companies" element={<CompaniesPage />} />
       <Route path="/companies/new" element={<CompanyPage />} />
-      <Route path="/companies/:id" element={<CompanyPage />} />
-      <Route path="/companies/:id/agents/:agentName" element={<AgentDetailPage />} />
+      <Route path="/companies/:companyName/agents/:agentName" element={<AgentDetailPage />} />
+      <Route path="/companies/:companyName" element={<CompanyPage />} />
     </Routes>
   )
 }

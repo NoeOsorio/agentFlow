@@ -26,8 +26,21 @@ function CompanySelector({ value, onChange }: CompanySelectorProps) {
 
   useEffect(() => {
     fetch('/api/companies/')
-      .then(r => r.ok ? r.json() as Promise<CompanyItem[]> : [])
-      .then(data => setCompanies(Array.isArray(data) ? data : []))
+      .then((r) => (r.ok ? r.json() : []))
+      .then((data: unknown) => {
+        const rows = Array.isArray(data) ? data : []
+        setCompanies(
+          rows
+            .map((row) => {
+              const r = row as { name?: string; namespace?: string }
+              return {
+                name: String(r.name ?? ''),
+                namespace: String(r.namespace ?? 'default'),
+              }
+            })
+            .filter((c) => c.name),
+        )
+      })
       .catch(() => setCompanies([]))
   }, [])
 

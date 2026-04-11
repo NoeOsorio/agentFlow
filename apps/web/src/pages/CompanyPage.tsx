@@ -9,9 +9,10 @@ import { OrgChart } from '../features/company/OrgChart'
 type Tab = 'org' | 'agents' | 'yaml'
 
 export default function CompanyPage() {
-  const { id } = useParams<{ id: string }>()
+  const { companyName: companyNameParam } = useParams<{ companyName?: string }>()
+  const companyResourceName = companyNameParam ? decodeURIComponent(companyNameParam) : undefined
   const [tab, setTab] = useState<Tab>('agents')
-  const [loading, setLoading] = useState(!!id)
+  const [loading, setLoading] = useState(!!companyResourceName)
 
   const loadCompany = useCompanyStore((s) => s.loadCompany)
   const saveCompany = useCompanyStore((s) => s.saveCompany)
@@ -25,10 +26,10 @@ export default function CompanyPage() {
   const yamlSpec = useCompanyStore((s) => s.yamlSpec)
 
   useEffect(() => {
-    if (!id) return
+    if (!companyResourceName) return
     setLoading(true)
-    loadCompany(id).finally(() => setLoading(false))
-  }, [id, loadCompany])
+    loadCompany(companyResourceName).finally(() => setLoading(false))
+  }, [companyResourceName, loadCompany])
 
   function handleEdit(_agent: InlineAgent) {
     // B0-PR-3: AgentFormModal will be wired here
@@ -57,7 +58,7 @@ export default function CompanyPage() {
     )
   }
 
-  if (!company && id) {
+  if (!company && companyResourceName) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-gray-950">
         <div className="space-y-2 text-center">
