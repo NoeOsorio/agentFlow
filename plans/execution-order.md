@@ -113,7 +113,7 @@ This document defines the recommended execution order for all 11 implementation 
   - `services/runtime/src/agentflow_runtime/nodes/__init__.py` (new — registry)
   - `services/runtime/src/agentflow_runtime/dag.py` (update — `build_graph(pipeline, company_context)`)
   - `services/runtime/src/agentflow_runtime/routing.py` (new — conditional edge functions)
-- [ ] **A2-PR-3** — Heartbeat + Lifecycle hooks + Budget enforcement
+- [x] **A2-PR-3** — Heartbeat + Lifecycle hooks + Budget enforcement
   - `services/runtime/src/agentflow_runtime/heartbeat.py` (new — `AgentHeartbeatMonitor`)
   - `services/runtime/src/agentflow_runtime/lifecycle.py` (new — `execute_with_lifecycle`)
   - `services/runtime/src/agentflow_runtime/budget.py` (new — `BudgetExceededError`, cost table)

@@ -1,13 +1,19 @@
 """LangGraph state definition for pipeline execution."""
 from __future__ import annotations
 
+import operator
 from dataclasses import dataclass
 from datetime import datetime
-from typing import Any
+from typing import Annotated, Any
 
 from pydantic import BaseModel, Field
 
 from .identity import CompanyContext
+
+
+def _merge_dicts(left: dict, right: dict) -> dict:
+    """Reducer for dict fields updated by parallel nodes."""
+    return {**left, **right}
 
 
 @dataclass
@@ -32,14 +38,14 @@ class PipelineState(BaseModel):
     run_id: str
     pipeline_name: str
     client_data: dict[str, Any] = Field(default_factory=dict)
-    # Results keyed by node_id
-    agent_outputs: dict[str, Any] = Field(default_factory=dict)
-    # Set of completed agent names
-    completed: list[str] = Field(default_factory=list)
-    # Set of failed agent names
-    failed: list[str] = Field(default_factory=list)
-    # Running cost in USD
-    cost_usd: float = 0.0
+    # Results keyed by node_id — Annotated reducer allows parallel node updates
+    agent_outputs: Annotated[dict[str, Any], _merge_dicts] = Field(default_factory=dict)
+    # Completed node IDs — operator.add appends during parallel fan-out
+    completed: Annotated[list[str], operator.add] = Field(default_factory=list)
+    # Failed node IDs
+    failed: Annotated[list[str], operator.add] = Field(default_factory=list)
+    # Running cost in USD — summed across parallel nodes
+    cost_usd: Annotated[float, operator.add] = 0.0
     # Error message if pipeline failed
     error: str | None = None
 
@@ -47,11 +53,11 @@ class PipelineState(BaseModel):
     company_name: str = ""
     company_context: CompanyContext | None = Field(default=None)
     current_agent_name: str | None = None
-    node_executions: dict[str, NodeExecutionRecord] = Field(default_factory=dict)
-    global_variables: dict[str, Any] = Field(default_factory=dict)
+    node_executions: Annotated[dict[str, Any], _merge_dicts] = Field(default_factory=dict)
+    global_variables: Annotated[dict[str, Any], _merge_dicts] = Field(default_factory=dict)
     current_branch: str | None = None
     iteration_index: int = 0
-    iteration_results: list[Any] = Field(default_factory=list)
+    iteration_results: Annotated[list[Any], operator.add] = Field(default_factory=list)
     streaming_channel: str | None = None
 
     model_config = {"arbitrary_types_allowed": True}
