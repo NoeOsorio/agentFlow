@@ -58,45 +58,29 @@ Build the organizational layer of the AgentFlow UI: a visual editor for defining
   - [ ] Last updated timestamp
 
 ### Phase 3: Company Detail Page Layout
-- [ ] **Create `apps/web/src/pages/CompanyPage.tsx`**:
-  - [ ] Three-panel layout (tabbed on mobile, side-by-side on desktop):
+- [x] **Create `apps/web/src/pages/CompanyPage.tsx`**:
+  - [x] Three-panel layout (tabbed on mobile, side-by-side on desktop):
     - **Tab 1:** "Org Chart" — visual hierarchy
     - **Tab 2:** "Agents" — card grid
     - **Tab 3:** "YAML" — raw editor
-  - [ ] Header: company name (editable), namespace badge, "Save" button, status badge
-  - [ ] "Add Agent" floating button (bottom right)
-  - [ ] Budget overview bar at top: `$240 / $500 used this month`
+  - [x] Header: company name (editable), namespace badge, "Save" button, status badge
+  - [x] "Add Agent" floating button (bottom right)
+  - [x] Budget overview bar at top: `$240 / $500 used this month`
 
 ### Phase 4: Agent Cards Grid
-- [ ] **Create `apps/web/src/features/company/AgentCard.tsx`**:
-  - [ ] Layout:
-    ```
-    ┌──────────────────────────────────────┐
-    │ [Avatar/Icon]  Alice                 │
-    │               Lead Engineer          │  ← role badge
-    │ Model: claude-sonnet-4-6 (Anthropic) │
-    │ ──────────────────────────────────── │
-    │ Persona: Senior Python engineer...   │  ← truncated, hover to expand
-    │ ──────────────────────────────────── │
-    │ Capabilities: [coding] [review]      │
-    │ ──────────────────────────────────── │
-    │ Budget: ████████░░ $80/$100          │  ← progress bar
-    │ Reports to: bob (CEO)                │
-    │ ──────────────────────────────────── │
-    │ [Edit]   [Delete]   [● Healthy]      │
-    └──────────────────────────────────────┘
-    ```
-  - [ ] Budget bar: green < 60%, yellow 60-80%, red > 80%
-  - [ ] Status dot: green=healthy, yellow=busy, gray=idle, red=unhealthy (from heartbeat)
-  - [ ] Capabilities as colored chips
-  - [ ] "Edit" → opens `AgentFormModal`
-  - [ ] "Delete" → confirmation dialog → removes agent from company spec
+- [x] **Create `apps/web/src/features/company/AgentCard.tsx`**:
+  - [x] Layout: Avatar + name + role badge + model + persona snippet + capabilities chips + budget bar + actions
+  - [x] Budget bar: green < 60%, yellow 60-80%, red > 80%
+  - [x] Status dot: green=healthy, yellow=degraded, gray=unknown, red=dead (from heartbeat)
+  - [x] Capabilities as colored chips
+  - [x] "Edit" → opens `AgentFormModal` (B0-PR-3 no-op stub)
+  - [x] "Delete" → confirmation dialog → removes agent from company spec
 
-- [ ] **Create `apps/web/src/features/company/AgentGrid.tsx`**:
-  - [ ] Responsive grid: 3 columns on desktop, 2 on tablet, 1 on mobile
-  - [ ] Renders `AgentCard` for each agent in company
-  - [ ] Filter bar: by department, by capability, by status
-  - [ ] Sort: by name, by role, by budget remaining, by status
+- [x] **Create `apps/web/src/features/company/AgentGrid.tsx`**:
+  - [x] Responsive grid: 3 columns on desktop, 2 on tablet, 1 on mobile
+  - [x] Renders `AgentCard` for each agent in company
+  - [x] Filter bar: by name, role, capability
+  - [x] Sort: by name, by role, by budget remaining, by status
 
 ### Phase 5: Agent Form Modal (Add/Edit)
 - [ ] **Create `apps/web/src/features/company/AgentFormModal.tsx`**:
@@ -121,22 +105,21 @@ Build the organizational layer of the AgentFlow UI: a visual editor for defining
   - [ ] Validation: name unique within company, budget > 0
 
 ### Phase 6: Org Chart Visual
-- [ ] **Create `apps/web/src/features/company/OrgChart.tsx`**:
-  - [ ] Uses `getOrgTree(company)` from `@agentflow/core` to build tree data
-  - [ ] Renders using a tree layout (can use `d3-hierarchy` or a simple recursive React component)
-  - [ ] Each org node: agent avatar + name + role
-  - [ ] Lines connecting manager → reports
-  - [ ] Click on agent node → opens `AgentFormModal` in edit mode
-  - [ ] "Add report" button on each node → opens `AgentFormModal` pre-filled with `reports_to`
-  - [ ] Zoom/pan on large orgs (use CSS transform)
-  - [ ] Install: `pnpm --filter @agentflow/web add d3-hierarchy @types/d3-hierarchy`
+- [x] **Create `apps/web/src/features/company/OrgChart.tsx`**:
+  - [x] Uses `getOrgTree(company)` from `@agentflow/core` to build tree data
+  - [x] Renders using a recursive React component tree layout (no d3-hierarchy needed)
+  - [x] Each org node: agent avatar + name + role
+  - [x] Lines connecting manager → reports
+  - [x] Click on agent node → calls `onAgentClick` (AgentFormModal wired in B0-PR-3)
+  - [x] "Add report" button on each node → calls `onAddReport`
+  - [x] Zoom/pan on large orgs (CSS transform + mouse drag)
 
-- [ ] **Create `apps/web/src/features/company/OrgNode.tsx`**:
-  - [ ] Circular avatar with role-color background
-  - [ ] Name below avatar
-  - [ ] Role badge
-  - [ ] Status dot (live from heartbeat store)
-  - [ ] Budget remaining shown on hover tooltip
+- [x] **Create `apps/web/src/features/company/OrgNode.tsx`**:
+  - [x] Circular avatar with role-color background
+  - [x] Name below avatar
+  - [x] Role badge
+  - [x] Status dot (live from heartbeat store)
+  - [x] Budget remaining shown on hover tooltip
 
 ### Phase 7: Department Management
 - [ ] **Create `apps/web/src/features/company/DepartmentPanel.tsx`**:

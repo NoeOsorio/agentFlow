@@ -49,8 +49,8 @@ Entrega la pantalla principal del editor de companies: layout de tres paneles (O
 
 ## Definition of Done
 
-- [ ] `pnpm --filter @agentflow/web build` sin errores de tipo
-- [ ] Tests pasan
-- [ ] `CompanyPage` renderiza sin errores con company de 10 agentes
-- [ ] `OrgChart` sin agentes muestra "No agents defined" en lugar de crash
-- [ ] Cada archivo tiene header comment con `@plan B0-PR-2`
+- [x] `pnpm --filter @agentflow/web build` sin errores de tipo
+- [x] Tests pasan
+- [x] `CompanyPage` renderiza sin errores con company de 10 agentes
+- [x] `OrgChart` sin agentes muestra "No agents defined" en lugar de crash
+- [x] Cada archivo tiene header comment con `@plan B0-PR-2`
