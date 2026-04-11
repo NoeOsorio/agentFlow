@@ -1,10 +1,12 @@
-// @plan B0-PR-2
+// @plan B0-PR-2 + B0-PR-3
 import { useEffect, useState } from 'react'
 import { useParams, Link } from 'react-router-dom'
 import type { InlineAgent } from '@agentflow/core'
 import { useCompanyStore } from '../store/companyStore'
 import { AgentGrid } from '../features/company/AgentGrid'
 import { OrgChart } from '../features/company/OrgChart'
+import { AgentFormModal } from '../features/company/AgentFormModal'
+import { CompanyYamlPanel } from '../features/company/CompanyYamlPanel'
 
 type Tab = 'org' | 'agents' | 'yaml'
 
@@ -13,6 +15,9 @@ export default function CompanyPage() {
   const companyResourceName = companyNameParam ? decodeURIComponent(companyNameParam) : undefined
   const [tab, setTab] = useState<Tab>('agents')
   const [loading, setLoading] = useState(!!companyResourceName)
+  const [modalOpen, setModalOpen] = useState(false)
+  const [editingAgent, setEditingAgent] = useState<InlineAgent | undefined>(undefined)
+  const [modalMode, setModalMode] = useState<'add' | 'edit'>('add')
 
   const loadCompany = useCompanyStore((s) => s.loadCompany)
   const saveCompany = useCompanyStore((s) => s.saveCompany)
@@ -23,7 +28,6 @@ export default function CompanyPage() {
   const deleteAgent = useCompanyStore((s) => s.deleteAgent)
   const agentBudgets = useCompanyStore((s) => s.agentBudgets)
   const agentHealth = useCompanyStore((s) => s.agentHealth)
-  const yamlSpec = useCompanyStore((s) => s.yamlSpec)
 
   useEffect(() => {
     if (!companyResourceName) return
@@ -31,8 +35,11 @@ export default function CompanyPage() {
     loadCompany(companyResourceName).finally(() => setLoading(false))
   }, [companyResourceName, loadCompany])
 
-  function handleEdit(_agent: InlineAgent) {
-    // B0-PR-3: AgentFormModal will be wired here
+  function handleEdit(agent: InlineAgent) {
+    const isNew = !agent.name
+    setEditingAgent(isNew ? undefined : agent)
+    setModalMode(isNew ? 'add' : 'edit')
+    setModalOpen(true)
   }
 
   function handleDelete(agentName: string) {
@@ -188,12 +195,7 @@ export default function CompanyPage() {
         )}
 
         {tab === 'yaml' && (
-          <div className="rounded-xl border border-gray-700 bg-gray-900 p-4">
-            <p className="mb-2 text-xs text-gray-500">YAML Editor — B0-PR-3 (CompanyYamlPanel) will replace this</p>
-            <pre className="overflow-auto whitespace-pre-wrap font-mono text-xs text-gray-300">
-              {yamlSpec || '# No YAML yet'}
-            </pre>
-          </div>
+          <CompanyYamlPanel />
         )}
       </main>
 
@@ -205,6 +207,14 @@ export default function CompanyPage() {
       >
         +
       </button>
+
+      {/* Agent Form Modal */}
+      <AgentFormModal
+        agent={editingAgent}
+        open={modalOpen}
+        onClose={() => { setModalOpen(false); setEditingAgent(undefined) }}
+        mode={modalMode}
+      />
     </div>
   )
 }
