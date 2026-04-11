@@ -1,36 +1,20 @@
 // @plan B1-PR-1
-// Custom edge types for the AgentFlow canvas.
-// Does NOT import from stores — receives data via React Flow edge props.
-import { useState, useCallback } from 'react'
+// Custom React Flow edge types.
+// These components receive all callbacks via React Flow props — no store imports.
+import { memo, useState } from 'react'
 import {
   BaseEdge,
   EdgeLabelRenderer,
   getBezierPath,
   useReactFlow,
-  type EdgeProps,
-  type EdgeTypes,
 } from '@xyflow/react'
+import type { EdgeProps } from '@xyflow/react'
 
 // ---------------------------------------------------------------------------
-// Branch color map for ConditionalEdge
+// DefaultEdge — animated dashed edge with a delete button on hover
 // ---------------------------------------------------------------------------
 
-const BRANCH_COLORS: Record<string, string> = {
-  true: '#22c55e',
-  false: '#ef4444',
-  default: '#a855f7',
-}
-
-function branchColor(branch: string | undefined): string {
-  if (!branch) return '#6b7280'
-  return BRANCH_COLORS[branch] ?? '#6b7280'
-}
-
-// ---------------------------------------------------------------------------
-// DefaultEdge — animated with delete button on hover
-// ---------------------------------------------------------------------------
-
-export function DefaultEdge({
+export const DefaultEdge = memo(function DefaultEdge({
   id,
   sourceX,
   sourceY,
@@ -38,8 +22,8 @@ export function DefaultEdge({
   targetY,
   sourcePosition,
   targetPosition,
-  markerEnd,
   style,
+  markerEnd,
 }: EdgeProps) {
   const [hovered, setHovered] = useState(false)
   const { deleteElements } = useReactFlow()
@@ -53,47 +37,45 @@ export function DefaultEdge({
     targetPosition,
   })
 
-  const handleDelete = useCallback(
-    (e: React.MouseEvent) => {
-      e.stopPropagation()
-      deleteElements({ edges: [{ id }] })
-    },
-    [id, deleteElements],
-  )
+  function handleDelete() {
+    deleteElements({ edges: [{ id }] })
+  }
 
   return (
     <>
+      {/* Wide invisible hit area for easier hover detection */}
+      <path
+        d={edgePath}
+        fill="none"
+        strokeWidth={20}
+        stroke="transparent"
+        onMouseEnter={() => setHovered(true)}
+        onMouseLeave={() => setHovered(false)}
+      />
       <BaseEdge
         id={id}
         path={edgePath}
-        markerEnd={markerEnd}
         style={{
-          strokeWidth: 2,
-          stroke: '#6b7280',
-          strokeDasharray: '5 3',
+          strokeDasharray: '5,5',
           animation: 'dashdraw 0.5s linear infinite',
           ...style,
         }}
-        interactionWidth={20}
-        onMouseEnter={() => setHovered(true)}
-        onMouseLeave={() => setHovered(false)}
+        markerEnd={markerEnd}
       />
       {hovered && (
         <EdgeLabelRenderer>
           <div
-            className="nodrag nopan"
             style={{
-              position: 'absolute',
               transform: `translate(-50%, -50%) translate(${labelX}px,${labelY}px)`,
-              pointerEvents: 'all',
             }}
+            className="absolute pointer-events-all nodrag nopan"
             onMouseEnter={() => setHovered(true)}
             onMouseLeave={() => setHovered(false)}
           >
             <button
-              aria-label="Delete edge"
               onClick={handleDelete}
-              className="flex h-5 w-5 items-center justify-center rounded-full bg-red-500 text-xs text-white hover:bg-red-600"
+              className="flex h-5 w-5 items-center justify-center rounded-full bg-red-500 text-xs leading-none text-white hover:bg-red-600"
+              title="Delete edge"
             >
               ×
             </button>
@@ -102,13 +84,24 @@ export function DefaultEdge({
       )}
     </>
   )
+})
+
+// ---------------------------------------------------------------------------
+// ConditionalEdge — distinct color per branch, branch label tooltip
+// ---------------------------------------------------------------------------
+
+const BRANCH_COLORS: Record<string, string> = {
+  true: '#22c55e',
+  false: '#ef4444',
+  else: '#94a3b8',
 }
 
-// ---------------------------------------------------------------------------
-// ConditionalEdge — per-branch color + label tooltip
-// ---------------------------------------------------------------------------
+function getBranchColor(branch?: string): string {
+  if (!branch) return '#94a3b8'
+  return BRANCH_COLORS[branch] ?? '#6366f1'
+}
 
-export function ConditionalEdge({
+export const ConditionalEdge = memo(function ConditionalEdge({
   id,
   sourceX,
   sourceY,
@@ -116,17 +109,11 @@ export function ConditionalEdge({
   targetY,
   sourcePosition,
   targetPosition,
-  data,
-  markerEnd,
   style,
+  markerEnd,
   label,
+  data,
 }: EdgeProps) {
-  const [hovered, setHovered] = useState(false)
-  const { deleteElements } = useReactFlow()
-
-  const branch = (data as { condition_branch?: string } | undefined)?.condition_branch
-  const color = branchColor(branch)
-
   const [edgePath, labelX, labelY] = getBezierPath({
     sourceX,
     sourceY,
@@ -136,14 +123,9 @@ export function ConditionalEdge({
     targetPosition,
   })
 
-  const handleDelete = useCallback(
-    (e: React.MouseEvent) => {
-      e.stopPropagation()
-      deleteElements({ edges: [{ id }] })
-    },
-    [id, deleteElements],
-  )
-
+  const branch = (data as { condition_branch?: string } | undefined)
+    ?.condition_branch
+  const color = getBranchColor(branch)
   const displayLabel = label ?? branch
 
   return (
@@ -151,52 +133,36 @@ export function ConditionalEdge({
       <BaseEdge
         id={id}
         path={edgePath}
+        style={{ stroke: color, strokeWidth: 2, ...style }}
         markerEnd={markerEnd}
-        style={{ strokeWidth: 2, stroke: color, ...style }}
-        interactionWidth={20}
-        onMouseEnter={() => setHovered(true)}
-        onMouseLeave={() => setHovered(false)}
       />
-      <EdgeLabelRenderer>
-        <div
-          className="nodrag nopan"
-          style={{
-            position: 'absolute',
-            transform: `translate(-50%, -50%) translate(${labelX}px,${labelY}px)`,
-            pointerEvents: 'all',
-          }}
-          onMouseEnter={() => setHovered(true)}
-          onMouseLeave={() => setHovered(false)}
-        >
-          {displayLabel && (
+      {displayLabel && (
+        <EdgeLabelRenderer>
+          <div
+            style={{
+              transform: `translate(-50%, -50%) translate(${labelX}px,${labelY}px)`,
+            }}
+            className="absolute nodrag nopan pointer-events-none"
+            title={String(displayLabel)}
+          >
             <span
               className="rounded px-1.5 py-0.5 text-xs font-medium text-white"
               style={{ backgroundColor: color }}
-              title={String(displayLabel)}
             >
               {String(displayLabel)}
             </span>
-          )}
-          {hovered && (
-            <button
-              aria-label="Delete edge"
-              onClick={handleDelete}
-              className="ml-1 flex h-4 w-4 items-center justify-center rounded-full bg-red-500 text-xs text-white hover:bg-red-600"
-            >
-              ×
-            </button>
-          )}
-        </div>
-      </EdgeLabelRenderer>
+          </div>
+        </EdgeLabelRenderer>
+      )}
     </>
   )
-}
+})
 
 // ---------------------------------------------------------------------------
-// Edge types map — plug into <ReactFlow edgeTypes={edgeTypes} />
+// edgeTypes map — plug directly into React Flow's edgeTypes prop
 // ---------------------------------------------------------------------------
 
-export const edgeTypes: EdgeTypes = {
-  default: DefaultEdge as EdgeTypes[string],
-  conditional: ConditionalEdge as EdgeTypes[string],
-}
+export const edgeTypes = {
+  default: DefaultEdge,
+  conditional: ConditionalEdge,
+} as const
