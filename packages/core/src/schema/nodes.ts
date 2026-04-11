@@ -240,7 +240,7 @@ export const SubWorkflowNodeSchema = NodeBaseSchema.merge(
 export type SubWorkflowNode = z.infer<typeof SubWorkflowNodeSchema>
 
 // ---------------------------------------------------------------------------
-// NodeSchema — discriminated union of all 14 types
+// Discriminated Union of all 14 node types
 // ---------------------------------------------------------------------------
 
 export const NodeSchema = z.discriminatedUnion('type', [
@@ -261,9 +261,6 @@ export const NodeSchema = z.discriminatedUnion('type', [
 ])
 
 export type PipelineNode = z.infer<typeof NodeSchema>
-
-// Keep NodeType as a discriminant helper
-export type NodeType = PipelineNode['type']
 
 // ---------------------------------------------------------------------------
 // Pipeline Edge Schema
