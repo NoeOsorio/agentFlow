@@ -32,7 +32,7 @@ class PipelineState(BaseModel):
     run_id: str
     pipeline_name: str
     client_data: dict[str, Any] = Field(default_factory=dict)
-    # Results keyed by agent name
+    # Results keyed by node_id
     agent_outputs: dict[str, Any] = Field(default_factory=dict)
     # Set of completed agent names
     completed: list[str] = Field(default_factory=list)
