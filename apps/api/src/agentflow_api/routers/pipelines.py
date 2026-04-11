@@ -1,15 +1,13 @@
 import json
+import uuid
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy import delete as sql_delete, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from sqlalchemy.orm import joinedload
-
 from ..database import get_db
 from ..models import AgentExecution, Pipeline, Run, RunStatus
-from ..run_read import run_to_read
 from ..schemas import PipelineCreate, PipelineRead, RunRead
 
 router = APIRouter(prefix="/pipelines", tags=["pipelines"])
@@ -73,8 +71,5 @@ async def execute_pipeline(name: str, body: dict, db: DB):
     )
     db.add(run)
     await db.commit()
-    loaded = await db.execute(
-        select(Run).options(joinedload(Run.pipeline)).where(Run.id == run.id),
-    )
-    run_loaded = loaded.unique().scalar_one()
-    return run_to_read(run_loaded)
+    await db.refresh(run)
+    return run

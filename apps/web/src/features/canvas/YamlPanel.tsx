@@ -109,7 +109,7 @@ export function YamlPanel() {
 
   return (
     <div
-      className="flex h-full min-h-0 min-w-0 shrink-0 flex-col self-stretch overflow-hidden border-l border-gray-800 bg-gray-950"
+      className="flex min-h-0 min-w-0 shrink-0 flex-col self-stretch border-l border-gray-800 bg-gray-950"
       style={{ width: yamlPanelWidth }}
     >
       {/* Toolbar */}
@@ -146,8 +146,8 @@ export function YamlPanel() {
         </div>
       </div>
 
-      {/* Editor — basis-0 + flex-1 so this region gets a real height; Monaco uses height:100% on its section */}
-      <div className="flex min-h-0 min-w-0 flex-1 basis-0 flex-col overflow-hidden">
+      {/* Editor — parent must be min-h-0 in a flex column so Monaco’s 100% height resolves */}
+      <div className="min-h-0 flex-1 overflow-hidden">
         <Editor
           height="100%"
           language="yaml"
@@ -155,9 +155,6 @@ export function YamlPanel() {
           value={yamlSpec}
           onChange={handleChange}
           onMount={handleMount}
-          loading={
-            <span className="text-xs text-gray-500">Loading editor…</span>
-          }
           options={{
             readOnly: isReadOnly,
             minimap: { enabled: false },
