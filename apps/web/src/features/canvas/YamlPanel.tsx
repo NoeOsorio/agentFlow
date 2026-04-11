@@ -109,7 +109,7 @@ export function YamlPanel() {
 
   return (
     <div
-      className="flex flex-col border-l border-gray-800 bg-gray-950"
+      className="flex min-h-0 min-w-0 shrink-0 flex-col self-stretch border-l border-gray-800 bg-gray-950"
       style={{ width: yamlPanelWidth }}
     >
       {/* Toolbar */}
@@ -146,8 +146,8 @@ export function YamlPanel() {
         </div>
       </div>
 
-      {/* Editor */}
-      <div className="flex-1 overflow-hidden">
+      {/* Editor — parent must be min-h-0 in a flex column so Monaco’s 100% height resolves */}
+      <div className="min-h-0 flex-1 overflow-hidden">
         <Editor
           height="100%"
           language="yaml"

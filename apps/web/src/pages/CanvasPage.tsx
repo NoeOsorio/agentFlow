@@ -4,7 +4,10 @@ import { useParams, Link } from 'react-router-dom'
 import { usePipelineStore } from '../store/pipelineStore'
 import { useCompanyStore } from '../store/companyStore'
 import { CanvasEditor } from '../features/canvas/CanvasEditor'
+import { ConfigPanel } from '../features/canvas/ConfigPanel'
 import { NodePalette } from '../features/canvas/NodePalette'
+import { PipelineHeader } from '../features/canvas/PipelineHeader'
+import { YamlPanel } from '../features/canvas/YamlPanel'
 
 export default function CanvasPage() {
   const { pipelineName: pipelineNameParam } = useParams<{ pipelineName?: string }>()
@@ -61,10 +64,16 @@ export default function CanvasPage() {
   return (
     <div className="flex h-screen w-screen overflow-hidden bg-gray-950">
       <NodePalette />
-      <main className="relative flex-1">
-        <CanvasEditor />
-      </main>
-      {/* ConfigPanel and PipelineHeader mount in B1-PR-3 */}
+      <div className="flex min-h-0 min-w-0 flex-1 flex-col">
+        <PipelineHeader />
+        <main className="flex min-h-0 flex-1">
+          <div className="relative min-h-0 min-w-0 flex-1">
+            <CanvasEditor />
+            <ConfigPanel />
+          </div>
+          <YamlPanel />
+        </main>
+      </div>
     </div>
   )
 }

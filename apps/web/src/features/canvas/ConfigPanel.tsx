@@ -1,8 +1,9 @@
 // @plan B1-PR-3
-import { useState } from 'react'
-import { usePipelineStore, useNodeValidationErrors } from '../../store/pipelineStore'
+import { useMemo, useState } from 'react'
+import { useCompanyStore } from '../../store/companyStore'
+import { usePipelineStore, useNodeValidationErrors, useVariableScope } from '../../store/pipelineStore'
 import { nodeConfigForms } from './nodeConfigForms'
-import type { PipelineNode } from '@agentflow/core'
+import type { AgentPodNode, PipelineNode } from '@agentflow/core'
 
 const NODE_TYPE_LABELS: Record<string, string> = {
   start: 'Start',
@@ -45,12 +46,23 @@ export function ConfigPanel() {
   const updateNodeConfig = usePipelineStore(s => s.updateNodeConfig)
   const deselectNode = usePipelineStore(s => s.deselectNode)
   const errors = useNodeValidationErrors(selectedNodeId ?? '')
+  const company = useCompanyStore(s => s.company)
+  const availableAgents = company?.spec.agents ?? []
+  const availableVariables = useVariableScope(selectedNodeId ?? '')
 
   const [confirmDelete, setConfirmDelete] = useState(false)
 
   const selectedNode = selectedNodeId
     ? nodes.find(n => n.id === selectedNodeId) ?? null
     : null
+
+  const resolvedAgentSpec = useMemo(() => {
+    if (!selectedNode || selectedNode.data.type !== 'agent_pod') return undefined
+    const ref = (selectedNode.data as AgentPodNode).agent_ref
+    const name = ref?.name
+    if (!name || !company?.spec.agents) return undefined
+    return company.spec.agents.find(a => a.name === name)
+  }, [selectedNode, company])
 
   const isOpen = selectedNode !== null
 
@@ -121,6 +133,9 @@ export function ConfigPanel() {
                   updateNodeConfig(selectedNode.id, patch)
                 }
                 nodeId={selectedNode.id}
+                availableAgents={availableAgents}
+                availableVariables={availableVariables}
+                resolvedAgentSpec={resolvedAgentSpec}
               />
             ) : (
               <p className="text-sm text-gray-500 italic">No configuration for this node type.</p>

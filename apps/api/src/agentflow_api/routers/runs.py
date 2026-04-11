@@ -23,9 +23,11 @@ async def list_runs(
     query = select(Run).order_by(Run.created_at.desc())
     if pipeline_name:
         pipeline_result = await db.execute(
-            select(Pipeline).where(Pipeline.name == pipeline_name)
+            select(Pipeline)
+            .where(Pipeline.name == pipeline_name)
+            .order_by(Pipeline.created_at.desc()),
         )
-        pipeline = pipeline_result.scalar_one_or_none()
+        pipeline = pipeline_result.scalars().first()
         if pipeline:
             query = query.where(Run.pipeline_id == pipeline.id)
     elif pipeline_id:
