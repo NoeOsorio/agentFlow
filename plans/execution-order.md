@@ -357,7 +357,7 @@ Three plans that depend on Wave 2 but are mutually independent.
 | Plan | File | Scope | Prerequisites |
 |------|------|-------|---------------|
 | **A2: Runtime Engine** | [plan-A2-runtime-engine.md](plan-A2-runtime-engine.md) | `services/runtime/src/` | A0 + A1 complete |
-| **B0: Company Editor UI** | [plan-B0-company-editor.md](plan-B0-company-editor.md) | `apps/web/src/features/company/`, `apps/web/src/pages/CompanyPage.tsx` | A0 + B3 complete |
+| **B0: Company Editor UI** | [plan-B0-company-editor.md](plan-B0-company-editor.md) | `apps/web/src/features/company/`, `apps/web/src/pages/CompanyPage.tsx` | A0 + B3 complete | <!-- PR-2 ✅ [#36](https://github.com/NoeOsorio/agentFlow/pull/36) --> |
 | **B1: Canvas Editor UI** | [plan-B1-canvas-editor.md](plan-B1-canvas-editor.md) | `apps/web/src/features/canvas/`, `apps/web/src/pages/CanvasPage.tsx` | A1 + B2 + B3 complete |
 
 **Sub-agent isolation:** A2 → Python files in `services/runtime/`. B0 → `apps/web/src/features/company/`. B1 → `apps/web/src/features/canvas/`. Zero overlap.
