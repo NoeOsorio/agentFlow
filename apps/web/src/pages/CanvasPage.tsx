@@ -1,11 +1,10 @@
-// @plan B1-PR-1
+// @plan B1-PR-1 (updated in B1-PR-2)
 import { useEffect, useState } from 'react'
 import { useParams, Link } from 'react-router-dom'
-import { ReactFlow, Background, Controls, MiniMap } from '@xyflow/react'
-import '@xyflow/react/dist/style.css'
 import { usePipelineStore } from '../store/pipelineStore'
 import { useCompanyStore } from '../store/companyStore'
-import { nodeTypes, edgeTypes } from '../features/canvas'
+import { CanvasEditor } from '../features/canvas/CanvasEditor'
+import { NodePalette } from '../features/canvas/NodePalette'
 
 export default function CanvasPage() {
   const { id } = useParams()
@@ -14,7 +13,6 @@ export default function CanvasPage() {
   const loadPipeline = usePipelineStore(s => s.loadPipeline)
   const saveStatus = usePipelineStore(s => s.saveStatus)
   const nodes = usePipelineStore(s => s.nodes)
-  const edges = usePipelineStore(s => s.edges)
   const companyRef = usePipelineStore(s => s.companyRef)
   const loadCompany = useCompanyStore(s => s.loadCompany)
 
@@ -59,24 +57,12 @@ export default function CanvasPage() {
   }
 
   return (
-    <div className="h-screen w-screen bg-gray-950">
-      <div className="absolute left-4 top-4 z-10 text-white">
-        <h1 className="text-lg font-semibold">AgentFlow Canvas</h1>
-        <p className="text-xs text-gray-400">
-          {id ? `Pipeline: ${id}` : 'New Pipeline'}
-        </p>
-      </div>
-      <ReactFlow
-        nodes={nodes}
-        edges={edges}
-        nodeTypes={nodeTypes}
-        edgeTypes={edgeTypes}
-        fitView
-      >
-        <Background />
-        <Controls />
-        <MiniMap />
-      </ReactFlow>
+    <div className="flex h-screen w-screen overflow-hidden bg-gray-950">
+      <NodePalette />
+      <main className="relative flex-1">
+        <CanvasEditor />
+      </main>
+      {/* ConfigPanel and PipelineHeader mount in B1-PR-3 */}
     </div>
   )
 }

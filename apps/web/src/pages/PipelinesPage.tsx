@@ -1,6 +1,7 @@
 // @plan B1-PR-4
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
+import Layout from '../components/Layout'
 
 // ---------------------------------------------------------------------------
 // Types
@@ -148,17 +149,11 @@ export default function PipelinesPage() {
   )
 
   return (
-    <div className="min-h-screen bg-gray-950 text-white">
-      <div className="mx-auto max-w-5xl px-6 py-8">
-        {/* Header */}
-        <header className="mb-8">
-          <h1 className="text-3xl font-bold tracking-tight">AgentFlow</h1>
-          <p className="mt-1 text-gray-400">AI agent pipeline orchestration</p>
-        </header>
-
+    <Layout>
+      <div className="mx-auto max-w-5xl">
         {/* Toolbar */}
         <div className="mb-6 flex flex-wrap items-center gap-3">
-          <h2 className="flex-1 text-xl font-semibold">Pipelines</h2>
+          <h1 className="flex-1 text-2xl font-bold tracking-tight">Pipelines</h1>
 
           {/* Company filter */}
           {companyNames.length > 0 && (
@@ -264,6 +259,6 @@ export default function PipelinesPage() {
           </div>
         )}
       </div>
-    </div>
+    </Layout>
   )
 }
