@@ -64,10 +64,10 @@ export default function CanvasPage() {
   return (
     <div className="flex h-screen w-screen overflow-hidden bg-gray-950">
       <NodePalette />
-      <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
+      <div className="flex min-h-0 min-w-0 flex-1 flex-col">
         <PipelineHeader />
-        <main className="flex min-h-0 min-w-0 flex-1 overflow-hidden">
-          <div className="relative min-h-0 min-w-0 flex-1 overflow-hidden">
+        <main className="flex min-h-0 flex-1">
+          <div className="relative min-h-0 min-w-0 flex-1">
             <CanvasEditor />
             <ConfigPanel />
           </div>

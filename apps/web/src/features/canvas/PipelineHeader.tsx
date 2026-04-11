@@ -189,7 +189,7 @@ export function PipelineHeader() {
         const detail = await res.text()
         throw new Error(detail || `HTTP ${res.status}`)
       }
-      navigate('/runs', { state: { queuedPipelineName: pipelineName.trim() } })
+      navigate('/runs')
     } catch (e) {
       setRunHint(e instanceof Error ? e.message : 'Run failed')
     } finally {
