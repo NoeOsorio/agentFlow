@@ -4,6 +4,10 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 
 
+class AgentNotFoundError(Exception):
+    """Raised when an agent name cannot be resolved in CompanyContext."""
+
+
 @dataclass
 class AgentLifecycleConfig:
     """Paperclip-style lifecycle hooks and heartbeat configuration."""
@@ -13,6 +17,17 @@ class AgentLifecycleConfig:
     heartbeat_interval_seconds: int = 30
     heartbeat_timeout_seconds: int = 120
     on_timeout: str = "fail"              # "continue" | "fail" | "retry"
+
+    @classmethod
+    def from_spec(cls, spec: dict) -> "AgentLifecycleConfig":
+        return cls(
+            on_start=spec.get("onStart", spec.get("on_start")),
+            on_done=spec.get("onDone", spec.get("on_done")),
+            on_fail=spec.get("onFail", spec.get("on_fail")),
+            heartbeat_interval_seconds=spec.get("heartbeatIntervalSeconds", spec.get("heartbeat_interval_seconds", 30)),
+            heartbeat_timeout_seconds=spec.get("heartbeatTimeoutSeconds", spec.get("heartbeat_timeout_seconds", 120)),
+            on_timeout=spec.get("onTimeout", spec.get("on_timeout", "fail")),
+        )
 
 
 @dataclass
@@ -36,14 +51,7 @@ class AgentIdentity:
         lifecycle: AgentLifecycleConfig | None = None
         lc_spec = agent_spec.get("lifecycle")
         if lc_spec:
-            lifecycle = AgentLifecycleConfig(
-                on_start=lc_spec.get("onStart"),
-                on_done=lc_spec.get("onDone"),
-                on_fail=lc_spec.get("onFail"),
-                heartbeat_interval_seconds=lc_spec.get("heartbeatIntervalSeconds", 30),
-                heartbeat_timeout_seconds=lc_spec.get("heartbeatTimeoutSeconds", 120),
-                on_timeout=lc_spec.get("onTimeout", "fail"),
-            )
+            lifecycle = AgentLifecycleConfig.from_spec(lc_spec)
 
         model = agent_spec.get("model", {})
 
@@ -54,16 +62,12 @@ class AgentIdentity:
             model_provider=model.get("provider", "anthropic"),
             model_id=model.get("id", "claude-sonnet-4-6"),
             temperature=model.get("temperature", 0.7),
-            max_tokens=model.get("maxTokens", 4096),
-            budget_monthly_usd=agent_spec.get("budgetMonthlyUsd", 100.0),
+            max_tokens=model.get("maxTokens", model.get("max_tokens", 4096)),
+            budget_monthly_usd=agent_spec.get("budgetMonthlyUsd", agent_spec.get("budget_monthly_usd", 100.0)),
             capabilities=agent_spec.get("capabilities", []),
-            reports_to=agent_spec.get("reportsTo"),
+            reports_to=agent_spec.get("reportsTo", agent_spec.get("reports_to")),
             lifecycle=lifecycle,
         )
-
-
-class AgentNotFoundError(Exception):
-    """Raised when an agent name cannot be resolved in CompanyContext."""
 
 
 @dataclass
