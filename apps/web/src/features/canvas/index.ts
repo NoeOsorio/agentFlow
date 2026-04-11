@@ -13,3 +13,6 @@ export { nodeConfigForms } from './nodeConfigForms'
 export { PipelineHeader } from './PipelineHeader'
 export { CanvasToolbar } from './CanvasToolbar'
 export { useKeyboardShortcuts } from './hooks/useKeyboardShortcuts'
+
+// @plan B1-PR-4
+export { YamlPanel } from './YamlPanel'
