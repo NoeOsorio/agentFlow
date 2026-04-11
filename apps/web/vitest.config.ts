@@ -1,14 +1,14 @@
 // @plan B3-PR-1 (updated in B1-PR-2 to support React component tests)
 import { defineConfig } from 'vitest/config'
-import { resolve } from 'path'
 import react from '@vitejs/plugin-react'
+import { resolve } from 'path'
 
 export default defineConfig({
   plugins: [react()],
   test: {
     globals: true,
     environment: 'node',
-    include: ['src/**/__tests__/**/*.test.ts', 'src/**/__tests__/**/*.test.tsx'],
+    include: ['src/**/__tests__/**/*.test.{ts,tsx}'],
     setupFiles: ['./src/test-setup.ts'],
     environmentMatchGlobs: [
       ['src/pages/__tests__/**/*.test.tsx', 'jsdom'],
