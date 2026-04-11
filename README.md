@@ -1,286 +1,151 @@
-# AgentFlow
+<div align="center">
 
-> Orquestación de agentes de IA con un archivo YAML. Como Kubernetes, pero para pipelines inteligentes.
+# ⚡ AgentFlow
 
----
+**AI agent pipelines. Declarative. Observable. Autonomous.**
 
-## ¿Qué es AgentFlow?
-
-AgentFlow es una plataforma open source para construir pipelines de agentes de IA que corren solos, de punta a punta, sin intervención humana.
-
-La idea central es simple: tú defines **qué** quieres que pase en un archivo YAML. AgentFlow se encarga del **cómo**.
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![TypeScript](https://img.shields.io/badge/TypeScript-5.x-3178C6?logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
+[![Python](https://img.shields.io/badge/Python-3.12+-3776AB?logo=python&logoColor=white)](https://www.python.org/)
+[![React](https://img.shields.io/badge/React-19-61DAFB?logo=react&logoColor=black)](https://react.dev/)
+[![LangGraph](https://img.shields.io/badge/LangGraph-latest-1C3C3C?logo=langchain&logoColor=white)](https://github.com/langchain-ai/langgraph)
+[![pnpm](https://img.shields.io/badge/pnpm-monorepo-F69220?logo=pnpm&logoColor=white)](https://pnpm.io/)
 
 ```yaml
 pipeline: wellness-website
 trigger: stripe.payment.success
-
-agents:
-  - research
-  - copywriter
-  - identity
-  - frontend
-  - qa
-
+agents: [research, copywriter, identity, frontend, qa]
 output:
   type: website
   deploy: vercel
   notify: email
 ```
 
-Eso es todo lo que necesitas escribir. El sistema hace el resto.
+*That's all you write. AgentFlow handles the rest.*
+
+</div>
 
 ---
 
-## El problema que resuelve
+## What is AgentFlow?
 
-Construir con agentes de IA hoy en día es caótico. Tienes agentes sueltos que nadie monitorea, prompts hardcodeados en el código, cero visibilidad de costos, y cuando algo falla nadie sabe por qué.
+AgentFlow runs multi-agent AI pipelines end-to-end from a single YAML file — no glue code, no babysitting. Define **what** you want. The runtime figures out **how**.
 
-AgentFlow resuelve eso con tres principios:
-
-**Declarativo.** Describes el estado deseado, no los pasos para llegar. Igual que k8s.
-
-**Observable.** Cada agente reporta su estado, costo y output. Nada ocurre en silencio.
-
-**Autónomo.** Una vez configurado, el pipeline corre solo. Tú solo intervienes cuando algo falla — y el sistema te avisa exactamente dónde y por qué.
+Think Kubernetes, but for intelligent pipelines.
 
 ---
 
-## Cómo funciona
+## The Problem
 
-El flujo completo tiene cuatro momentos:
+Building with AI agents today is chaotic: loose agents nobody monitors, hardcoded prompts, zero cost visibility, and when something breaks — nobody knows where or why.
+
+AgentFlow fixes this with three principles:
+
+| | |
+|---|---|
+| **Declarative** | Describe the desired state, not the steps. Like k8s. |
+| **Observable** | Every agent reports its status, cost, and output. Nothing runs silently. |
+| **Autonomous** | Once configured, the pipeline runs itself. You only intervene when something fails — and the system tells you exactly where. |
+
+---
+
+## How It Works
 
 ```
-Trigger → Orquestador → Agentes → Output
+Trigger → Orchestrator → AgentPods → Output
 ```
 
-**1. Trigger.** Algo dispara el pipeline: un pago en Stripe, un formulario enviado, un mensaje, una tarea en Linear. AgentFlow escucha el evento y arranca el job.
-
-**2. Orquestador.** Lee el YAML, construye el grafo de dependencias entre agentes (el DAG), y los ejecuta en el orden correcto — paralelizando todo lo que puede.
-
-**3. Agentes.** Cada agente es un `AgentPod` — una unidad aislada con su propio prompt, modelo, límite de tokens, timeout y validación de output. Se pueden combinar, reordenar y reemplazar sin tocar el resto del sistema.
-
-**4. Output.** El resultado se ensambla, se deploya (website en Vercel, post en redes, email, etc.) y se entrega al cliente con sus credenciales — sin que el operador haga nada.
+1. **Trigger** — A Stripe payment, form submission, Linear task, or any webhook fires the pipeline.
+2. **Orchestrator** — Reads the YAML, builds a dependency graph (DAG), and executes agents in order — parallelizing everything it can.
+3. **AgentPods** — Each agent is an isolated unit with its own prompt, model, token limit, timeout, and output validation.
+4. **Output** — The result is assembled, deployed (Vercel, email, social post, etc.), and delivered — without the operator touching anything.
 
 ---
 
-## Los tres niveles de control
+## Interfaces
 
-AgentFlow está diseñado para ser usado de tres formas distintas según quién lo opera:
-
-| Nivel | Interfaz | Para quién |
+| Level | Interface | Who uses it |
 |---|---|---|
-| Visual | Canvas drag & drop (GUI) | Operadores sin código |
-| Declarativo | `agentflow.yaml` | Developers |
-| Autónomo | Runtime | Nadie — corre solo |
+| Visual | Drag & drop canvas (GUI) | Operators, no-code |
+| Declarative | `agentflow.yaml` | Developers |
+| Autonomous | Runtime | Nobody — it runs itself |
 
-Los tres niveles están sincronizados: cualquier cambio en la GUI actualiza el YAML, y cualquier cambio en el YAML se refleja en la GUI. El YAML es siempre el source of truth.
-
----
-
-## Conceptos clave
-
-### AgentPod
-
-Un `AgentPod` es la unidad básica del sistema. Es un agente de IA envuelto en un contrato estandarizado que el runtime puede gestionar.
-
-Un agente suelto es una función que llama a un LLM y devuelve texto. Un `AgentPod` es ese mismo agente, pero con:
-
-- Contexto del cliente inyectado automáticamente
-- Validación del output contra un schema
-- Conteo de tokens y control de presupuesto
-- Retry automático con backoff exponencial
-- Checkpoint a Redis para recuperación ante fallas
-- Lifecycle hooks (`onStart`, `onDone`, `onFail`)
-
-Cualquier agente que implemente la interfaz `AgentPod` puede conectarse al canvas con drag & drop, sin tocar el runtime.
+All three stay in sync. GUI changes update the YAML. YAML changes update the GUI. **The YAML is always the source of truth.**
 
 ---
 
-### El YAML spec
+## Quick Start
 
-El archivo `agentflow.yaml` es el documento completo de un pipeline. Controla todo:
-
-```yaml
-apiVersion: florai/v1
-kind: Pipeline
-namespace: web
-name: wellness-website
-
-trigger:
-  source: stripe.payment.success
-  intake: forms.wellness-intake-v3   # formulario que alimenta el contexto
-
-context:
-  builder: wellness-context-v2       # convierte el form en JSON estructurado
-  shared: true                       # todos los agentes ven el mismo contexto
-
-agents:
-  - name: research
-    image: agents/research:v1.2
-    resources:
-      tokens: 3000
-      timeout: 45s
-
-  - name: copywriter
-    image: agents/copywriter:v2.0
-    dependsOn: [research]            # espera a research antes de correr
-    resources:
-      tokens: 5000
-      timeout: 60s
-
-  - name: frontend
-    dependsOn: [copywriter, identity] # corre cuando ambos terminan
-    resources:
-      tokens: 8000
-      timeout: 120s
-
-  - name: qa
-    dependsOn: [frontend]
-    minScore: 0.80                   # si baja de 80%, reintenta frontend
-
-policy:
-  concurrency: 3                     # máx 3 pipelines en paralelo
-  budget: $4.00                      # mata el job si supera este costo
-  retries: 2
-  backoff: exponential
-  onFailure: dead-letter-queue
-
-output:
-  type: website
-  deploy:
-    provider: vercel
-    domain: "{{ client.domain }}"
-  notify:
-    channel: email
-    template: emails/delivery-es.md
-```
-
-Los pipelines soportan `extends` — puedes tener un `base-website.yaml` y sobreescribir solo lo que cambia por nicho. Cuando mejoras la base, todos los pipelines heredan la mejora.
-
----
-
-### El runtime
-
-El runtime es el motor invisible. Lee el YAML, lo compila a un grafo ejecutable, y hace todo lo que no quieres hacer manualmente:
-
-- Resuelve el orden de ejecución (DAG automático)
-- Paraleliza agentes cuando sus dependencias lo permiten
-- Escala workers según la carga
-- Persiste estado en Redis para recuperación ante fallas
-- Mata jobs que superan el budget
-- Envía alertas solo cuando algo falla, no en cada paso
-
----
-
-## Arquitectura en capas
-
-```
-┌─────────────────────────────────────┐
-│  Capa 1 — Superficie del cliente    │
-│  Landing · Intake form · Pago       │
-└──────────────┬──────────────────────┘
-               │ webhook trigger
-┌──────────────▼──────────────────────┐
-│  Capa 2 — Orquestador               │
-│  Job queue · State machine ·        │
-│  Context builder · Retry engine     │
-└──────────────┬──────────────────────┘
-               │ dispatch agents
-┌──────────────▼──────────────────────┐
-│  Capa 3 — AgentPods                 │
-│  Research · Copy · Identity ·       │
-│  Frontend · QA · SEO                │
-└──────────────┬──────────────────────┘
-               │ assembled output
-┌──────────────▼──────────────────────┐
-│  Capa 4 — Output engine             │
-│  Assembler · Deploy · Email ·       │
-│  DNS / dominio                      │
-└──────────────┬──────────────────────┘
-               │ siempre activo
-┌──────────────▼──────────────────────┐
-│  Capa 5 — Observabilidad            │
-│  Logs · Cost tracker · Dashboard ·  │
-│  Alertas por excepción              │
-└─────────────────────────────────────┘
-```
-
----
-
-## Stack tecnológico
-
-| Componente | Tecnología | Por qué |
-|---|---|---|
-| Canvas GUI | React Flow | Librería base de nodos, MIT, battle-tested |
-| State management | Zustand | AST store sincronizado con el YAML |
-| YAML parser | js-yaml | Parseo y serialización bidireccional |
-| Job queue | BullMQ + Redis | Persistencia, retry, dead-letter-queue |
-| Agent orchestration | LangGraph | Orquestación multi-agente con estado |
-| Deploy automático | Vercel API | Deploy programático sin fricción |
-| Email transaccional | Resend | Envío de credenciales al cliente |
-| Monitoreo | Grafana + Prometheus | Dashboards de costo, latencia, estado |
-| Modelos LLM | Anthropic / OpenAI / Groq | Intercambiables por agente |
-
----
-
-## Modelo de negocio
-
-AgentFlow es open source bajo licencia MIT. El modelo de monetización se basa en dos capas:
-
-**Agencia propia.** El mismo sistema se usa internamente para producir websites, contenido y aplicaciones para clientes finales. Los primeros clientes validan el pipeline y financian el desarrollo.
-
-**Servicios premium.** Hosting gestionado, soporte prioritario, agentes pre-construidos por industria, y acceso a pipelines de nicho listos para usar.
-
----
-
-## Estado actual
-
-El proyecto está en fase de diseño de arquitectura y especificación técnica. Los próximos pasos son:
-
-1. Definir el schema completo del AST
-2. Implementar el compilador YAML → AST → jobs
-3. Construir el primer AgentPod funcional (copywriter)
-4. Conectar el canvas de React Flow al AST store
-5. Primer pipeline end-to-end: formulario → website deployado
-
----
-
-## Desarrollo local
-
-Requisitos: **Node.js ≥ 20**, **pnpm ≥ 9**, **Python ≥ 3.12** y [**uv**](https://docs.astral.sh/uv/) instalado.
-
-Tras clonar el repositorio, instala dependencias de Node y sincroniza los entornos Python de la API y del runtime:
+**Requirements:** Node.js ≥ 20, pnpm ≥ 9, Python ≥ 3.12, [uv](https://docs.astral.sh/uv/)
 
 ```bash
+# Clone and install everything
+git clone https://github.com/your-org/agentflow
+cd agentflow
 pnpm run setup
+
+# Start infrastructure
+docker compose up postgres redis -d
+
+# Run the stack
+pnpm dev                                              # Frontend (http://localhost:3000)
+cd apps/api && uv run uvicorn agentflow_api.main:app --reload --port 8000  # API
 ```
 
-Equivale a `pnpm install` más `uv sync --group dev` en `apps/api` y `services/runtime`. Para repetir solo la parte Python:
-
+Full stack via Docker:
 ```bash
-pnpm run setup:python
-```
-
-El detalle de cómo levantar Postgres, Redis, API y web está en [CLAUDE.md](./CLAUDE.md) (comandos de infraestructura y servicios).
-
-### Documentación del CLI
-
-```bash
-# Modo desarrollo (hot reload en http://localhost:4321)
-pnpm --filter @agentflow/cli-docs dev
-
-# Build estático
-pnpm --filter @agentflow/cli-docs build
+docker compose up
+# Web → http://localhost:3000
+# API → http://localhost:8000
+# Docs → http://localhost:8000/docs
 ```
 
 ---
 
-## Contribuir
+## Monorepo Structure
 
-AgentFlow está diseñado para ser extendido. Cualquier agente que implemente la interfaz `AgentPod` puede integrarse al sistema. Cualquier output que implemente `OutputRouter` puede recibir el resultado de un pipeline.
-
-La documentación completa de la interfaz y el contrato de integración estará disponible con el primer release.
+```
+apps/web/          Vite + React + Tailwind — canvas GUI
+apps/api/          FastAPI — pipeline CRUD and run management
+services/runtime/  LangGraph DAG engine and AgentPod base (Python)
+packages/core/     YAML schema + Zod parser, shared TS types
+packages/ui/       Shared React component library
+packages/sdk/      TypeScript SDK for pipeline authoring
+```
 
 ---
+
+## Tech Stack
+
+| Layer | Tech |
+|---|---|
+| Canvas GUI | React Flow |
+| State | Zustand |
+| YAML | js-yaml |
+| Job queue | BullMQ + Redis |
+| Orchestration | LangGraph |
+| Deploy | Vercel API |
+| Email | Resend |
+| LLMs | Anthropic / OpenAI / Groq (per-agent) |
+
+---
+
+## Architecture
+
+For a full architectural breakdown — layer diagrams, AgentPod lifecycle, YAML spec reference, DAG engine internals — see [ARCHITECTURE.md](./ARCHITECTURE.md).
+
+---
+
+## Contributing
+
+AgentFlow is designed to be extended. Any agent that implements the `AgentPod` interface plugs into the system. Any output that implements `OutputRouter` can receive a pipeline result.
+
+Full interface docs will ship with the first release.
+
+---
+
+<div align="center">
 
 *AgentFlow — build once, run forever.*
+
+</div>
