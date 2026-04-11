@@ -134,11 +134,11 @@ This document defines the recommended execution order for all 11 implementation 
   - `apps/web/src/pages/CompanyPage.tsx` (new — 3-panel: OrgChart / Agents / YAML)
   - `apps/web/src/features/company/AgentCard.tsx` (new)
   - `apps/web/src/features/company/AgentGrid.tsx` (new — filter/sort)
-- [ ] **B0-PR-3** — Agent form modal + Org chart visualization
+- [x] **B0-PR-3** — Agent form modal + Org chart visualization
   - `apps/web/src/features/company/AgentFormModal.tsx` (new — full agent form with react-hook-form)
   - `apps/web/src/features/company/OrgChart.tsx` (new — d3-hierarchy tree)
   - `apps/web/src/features/company/OrgNode.tsx` (new)
-- [ ] **B0-PR-4** — Departments + YAML panel + Budget overview + Pipeline link + Agent detail page
+- [x] **B0-PR-4** — Departments + YAML panel + Budget overview + Pipeline link + Agent detail page
   - `apps/web/src/features/company/DepartmentPanel.tsx` (new)
   - `apps/web/src/features/company/CompanyYamlPanel.tsx` (new — Monaco YAML)
   - `apps/web/src/features/company/BudgetOverview.tsx` (new)
