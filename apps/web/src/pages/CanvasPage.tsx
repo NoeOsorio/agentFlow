@@ -1,7 +1,6 @@
 // @plan B1-PR-1 (updated in B1-PR-2)
 import { useEffect, useState } from 'react'
 import { useParams, Link } from 'react-router-dom'
-import { useShallow } from 'zustand/react/shallow'
 import { usePipelineStore } from '../store/pipelineStore'
 import { useCompanyStore } from '../store/companyStore'
 import { CanvasEditor } from '../features/canvas/CanvasEditor'
@@ -15,9 +14,10 @@ export default function CanvasPage() {
   const pipelineResourceName = pipelineNameParam ? decodeURIComponent(pipelineNameParam) : undefined
   const [loading, setLoading] = useState(!!pipelineResourceName)
 
-  const { loadPipeline, saveStatus, nodes, companyRef } = usePipelineStore(
-    useShallow(s => ({ loadPipeline: s.loadPipeline, saveStatus: s.saveStatus, nodes: s.nodes, companyRef: s.companyRef }))
-  )
+  const loadPipeline = usePipelineStore(s => s.loadPipeline)
+  const saveStatus = usePipelineStore(s => s.saveStatus)
+  const nodes = usePipelineStore(s => s.nodes)
+  const companyRef = usePipelineStore(s => s.companyRef)
   const loadCompany = useCompanyStore(s => s.loadCompany)
 
   useEffect(() => {
@@ -64,10 +64,10 @@ export default function CanvasPage() {
   return (
     <div className="flex h-screen w-screen overflow-hidden bg-gray-950">
       <NodePalette />
-      <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
+      <div className="flex min-h-0 min-w-0 flex-1 flex-col">
         <PipelineHeader />
-        <main className="flex min-h-0 min-w-0 flex-1 overflow-hidden">
-          <div className="relative min-h-0 min-w-0 flex-1 overflow-hidden">
+        <main className="flex min-h-0 flex-1">
+          <div className="relative min-h-0 min-w-0 flex-1">
             <CanvasEditor />
             <ConfigPanel />
           </div>
