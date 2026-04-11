@@ -8,12 +8,12 @@ export default defineConfig({
   test: {
     globals: true,
     environment: 'node',
+    include: ['src/**/__tests__/**/*.test.ts', 'src/**/__tests__/**/*.test.tsx'],
+    setupFiles: ['./src/test-setup.ts'],
     environmentMatchGlobs: [
-      // Canvas component tests need jsdom
-      ['src/features/canvas/__tests__/**', 'jsdom'],
+      ['src/pages/__tests__/**/*.test.tsx', 'jsdom'],
+      ['src/features/**/__tests__/**/*.test.tsx', 'jsdom'],
     ],
-    include: ['src/**/__tests__/**/*.test.{ts,tsx}'],
-    setupFiles: ['src/features/canvas/__tests__/setup.ts'],
   },
   resolve: {
     alias: {
