@@ -4,9 +4,11 @@ from typing import Annotated
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import joinedload
 
 from ..database import get_db
 from ..models import Pipeline, Run
+from ..run_read import run_to_read
 from ..schemas import RunRead
 
 router = APIRouter(prefix="/runs", tags=["runs"])
@@ -20,7 +22,7 @@ async def list_runs(
     pipeline_name: str | None = None,
     pipeline_id: uuid.UUID | None = None,
 ):
-    query = select(Run).order_by(Run.created_at.desc())
+    query = select(Run).options(joinedload(Run.pipeline)).order_by(Run.created_at.desc())
     if pipeline_name:
         pipeline_result = await db.execute(
             select(Pipeline)
@@ -33,12 +35,14 @@ async def list_runs(
     elif pipeline_id:
         query = query.where(Run.pipeline_id == pipeline_id)
     result = await db.execute(query)
-    return result.scalars().all()
+    runs = result.unique().scalars().all()
+    return [run_to_read(r) for r in runs]
 
 
 @router.get("/{run_id}", response_model=RunRead)
 async def get_run(run_id: uuid.UUID, db: DB):
-    run = await db.get(Run, run_id)
+    result = await db.execute(select(Run).options(joinedload(Run.pipeline)).where(Run.id == run_id))
+    run = result.unique().scalar_one_or_none()
     if not run:
         raise HTTPException(status_code=404, detail="Run not found")
-    return run
+    return run_to_read(run)
