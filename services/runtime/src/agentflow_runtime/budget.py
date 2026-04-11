@@ -1,15 +1,26 @@
 """Budget enforcement — per-agent and per-pipeline cost limits."""
 from __future__ import annotations
 
-from .identity import AgentIdentity
-from .state import PipelineState
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from .identity import AgentIdentity
+    from .state import PipelineState
+
 
 MODEL_COSTS: dict[str, float] = {
-    "claude-opus-4-6": 0.000015,
-    "claude-sonnet-4-6": 0.000003,
-    "claude-haiku-4-5": 0.00000025,
-    "gpt-4o": 0.000005,
-    "gpt-4o-mini": 0.00000015,
+    # Anthropic
+    "claude-opus-4-6":    0.000015,
+    "claude-sonnet-4-6":  0.000003,
+    "claude-haiku-4-5":   0.00000025,
+    # OpenAI
+    "gpt-4o":             0.000005,
+    "gpt-4o-mini":        0.00000015,
+    "gpt-4":              0.000010,
+    "gpt-3.5-turbo":      0.000002,
+    # Google
+    "gemini-pro":         0.000001,
+    "gemini-flash":       0.00000035,
 }
 
 # Fallback cost per token for unknown models
@@ -27,7 +38,7 @@ def estimate_cost(tokens: int, model_id: str) -> float:
 
 
 def check_agent_budget(
-    agent: AgentIdentity,
+    agent: "AgentIdentity",
     cost_so_far: float,
     new_cost: float,
 ) -> None:
@@ -40,7 +51,7 @@ def check_agent_budget(
         )
 
 
-def check_pipeline_budget(state: PipelineState, new_cost: float) -> None:
+def check_pipeline_budget(state: "PipelineState", new_cost: float) -> None:
     """Raise BudgetExceededError if adding new_cost would exceed the pipeline's total cost_usd cap.
 
     The cap is read from state.global_variables['budget_usd'] when present.

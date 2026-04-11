@@ -1,89 +1,223 @@
-"""Build a LangGraph StateGraph from a pipeline definition."""
+"""Build a LangGraph StateGraph from a pipeline dict + CompanyContext."""
 from __future__ import annotations
 
+import logging
+from datetime import datetime, timezone
 from typing import Any, Callable
 
-from langgraph.graph import StateGraph, END
+from langgraph.graph import END, START, StateGraph
 
-from .state import PipelineState
-from .pod import AgentPod, AgentContext, AgentResult
+from .budget import BudgetExceededError, check_agent_budget
+from .identity import CompanyContext
+from .nodes import UnknownNodeTypeError, get_node_executor
+from .routing import build_conditional_edge_fn
+from .state import NodeExecutionRecord, PipelineState
+from .variables import VariableResolver
+
+logger = logging.getLogger(__name__)
 
 
-def _make_agent_node(pod: AgentPod) -> Callable[[PipelineState], dict[str, Any]]:
-    """Wrap an AgentPod as a LangGraph node function."""
+def _wrap_node_executor(
+    node: dict,
+    company_context: CompanyContext,
+) -> Callable[[PipelineState], dict[str, Any]]:
+    """
+    Wrap a NodeExecutor as a LangGraph async node function.
 
-    async def node(state: PipelineState) -> dict[str, Any]:
-        context = AgentContext(
-            run_id=state.run_id,
-            pipeline_name=state.pipeline_name,
-            client_data=state.client_data,
-            previous_outputs=state.agent_outputs,
+    Handles:
+    - Variable resolution in node config before execution
+    - Agent identity lookup for agent_pod nodes
+    - Budget enforcement (post-execution)
+    - NodeExecutionRecord tracking
+    - Graceful passthrough for unregistered node types
+    """
+    node_id: str = node["id"]
+    node_type: str = node.get("type", "")
+
+    async def run_node(state: PipelineState) -> dict[str, Any]:
+        resolver = VariableResolver(state)
+        resolved_config = resolver.resolve_all(node)
+
+        record = NodeExecutionRecord(
+            node_id=node_id,
+            node_type=node_type,
+            agent_name=None,
+            status="running",
+            started_at=datetime.now(timezone.utc),
         )
 
+        # Resolve agent identity for agent_pod nodes
+        agent = None
+        agent_ref = node.get("agentRef") or node.get("agent_ref")
+        if agent_ref:
+            agent_name = agent_ref.get("name")
+            if agent_name:
+                agent = company_context.resolve_agent(agent_name)
+                record.agent_name = agent_name
+
+        # Look up executor — skip (passthrough) unregistered node types
         try:
-            await pod.on_start(context)
-            result: AgentResult = await pod.run(context)
-            await pod.on_done(result)
-        except Exception as exc:
-            await pod.on_fail(exc)
+            executor = get_node_executor(node_type)
+        except UnknownNodeTypeError:
+            logger.debug("No executor for node type %r — passthrough", node_type)
+            record.status = "skipped"
+            record.finished_at = datetime.now(timezone.utc)
+            new_records = {**state.node_executions, node_id: record}
             return {
-                "failed": state.failed + [pod.name],
+                "node_executions": new_records,
+                "completed": state.completed + [node_id],
+            }
+
+        # Execute node
+        try:
+            result = await executor.execute(resolved_config, state, company_context)
+        except BudgetExceededError:
+            raise  # propagate budget errors immediately
+        except Exception as exc:
+            record.status = "failed"
+            record.finished_at = datetime.now(timezone.utc)
+            record.error = str(exc)
+            new_records = {**state.node_executions, node_id: record}
+            return {
+                "node_executions": new_records,
+                "failed": state.failed + [node_id],
                 "error": str(exc),
             }
 
+        # Post-execution budget enforcement
+        if agent is not None and result.cost_usd > 0:
+            agent_cost_so_far = sum(
+                rec.cost_usd
+                for rec in state.node_executions.values()
+                if rec.agent_name == agent.name
+            )
+            check_agent_budget(agent, agent_cost_so_far, result.cost_usd)
+
+        record.status = "completed"
+        record.finished_at = datetime.now(timezone.utc)
+        record.tokens_used = result.tokens_used
+        record.cost_usd = result.cost_usd
+        record.output_snapshot = result.output
+
+        new_records = {**state.node_executions, node_id: record}
+        new_outputs = {**state.agent_outputs, node_id: result.output}
+
         return {
-            "agent_outputs": {**state.agent_outputs, pod.name: result.output},
-            "completed": state.completed + [pod.name],
-            "cost_usd": state.cost_usd + (result.tokens_used * 0.000003),  # rough estimate
+            "agent_outputs": new_outputs,
+            "node_executions": new_records,
+            "completed": state.completed + [node_id],
+            "cost_usd": state.cost_usd + result.cost_usd,
         }
 
-    node.__name__ = f"agent_{pod.name}"
-    return node
+    run_node.__name__ = f"node_{node_id}"
+    return run_node
 
 
-def build_graph(
-    agents: list[AgentPod],
-    dependencies: dict[str, list[str]],
-) -> StateGraph:
+def _make_if_else_passthrough(node_id: str) -> Callable[[PipelineState], dict[str, Any]]:
     """
-    Build a LangGraph StateGraph from a list of AgentPods and their dependencies.
+    If/else nodes are pure routing constructs — they don't execute logic themselves.
+    LangGraph routes via the conditional edge function; this node just marks itself done.
+    """
+
+    async def passthrough(state: PipelineState) -> dict[str, Any]:
+        return {"completed": state.completed + [node_id]}
+
+    passthrough.__name__ = f"node_{node_id}"
+    return passthrough
+
+
+def build_graph(pipeline: dict, company_context: CompanyContext) -> StateGraph:
+    """
+    Build a LangGraph StateGraph from a pipeline dict and CompanyContext.
+
+    New signature for A2-PR-3 (replaces the old agents+dependencies API).
 
     Args:
-        agents: List of AgentPod instances to execute
-        dependencies: Map of agent_name -> [names of agents that must complete first]
+        pipeline: Fully parsed pipeline YAML dict (apiVersion/kind/metadata/spec).
+        company_context: Resolved company with all agent identities.
 
     Returns:
         An uncompiled LangGraph StateGraph. Call .compile() before invoking.
     """
-    agent_map = {pod.name: pod for pod in agents}
+    spec = pipeline.get("spec", {})
+    nodes: list[dict] = spec.get("nodes", [])
+    edges: list[dict] = spec.get("edges", [])
 
     graph = StateGraph(PipelineState)
 
-    # Add a node for each agent
-    for pod in agents:
-        graph.add_node(pod.name, _make_agent_node(pod))
+    # Identify if_else nodes for special handling
+    if_else_ids = {n["id"] for n in nodes if n.get("type") == "if_else"}
 
-    # Wire edges: START → agents with no dependencies
-    from langgraph.graph import START
-    for pod in agents:
-        deps = dependencies.get(pod.name, [])
-        if not deps:
-            graph.add_edge(START, pod.name)
+    # ------------------------------------------------------------------ #
+    # Add nodes
+    # ------------------------------------------------------------------ #
+    for node in nodes:
+        node_id = node["id"]
+        node_type = node.get("type", "")
 
-    # Wire edges: agent → dependents (after an agent completes, trigger its dependents)
-    # Build reverse map: agent → agents that depend on it
-    dependents: dict[str, list[str]] = {pod.name: [] for pod in agents}
-    for agent_name, deps in dependencies.items():
-        for dep in deps:
-            if dep in dependents:
-                dependents[dep].append(agent_name)
+        # Validate agent refs eagerly so errors surface at build time
+        agent_ref = node.get("agentRef") or node.get("agent_ref")
+        if node_type == "agent_pod" and agent_ref:
+            company_context.resolve_agent(agent_ref.get("name", ""))
 
-    for pod in agents:
-        targets = dependents[pod.name]
-        if targets:
-            for target in targets:
-                graph.add_edge(pod.name, target)
+        if node_id in if_else_ids:
+            graph.add_node(node_id, _make_if_else_passthrough(node_id))
         else:
-            graph.add_edge(pod.name, END)
+            graph.add_node(node_id, _wrap_node_executor(node, company_context))
+
+    # ------------------------------------------------------------------ #
+    # Entry edges: START → start-typed nodes (or first nodes with no incoming)
+    # ------------------------------------------------------------------ #
+    target_ids = {e["target"] for e in edges}
+    for node in nodes:
+        node_id = node["id"]
+        node_type = node.get("type", "")
+        if node_type == "start" or node_id not in target_ids:
+            graph.add_edge(START, node_id)
+
+    # ------------------------------------------------------------------ #
+    # Exit edges: end-typed nodes → END (or last nodes with no outgoing)
+    # ------------------------------------------------------------------ #
+    source_ids = {e["source"] for e in edges}
+    for node in nodes:
+        node_id = node["id"]
+        node_type = node.get("type", "")
+        if node_type == "end" or node_id not in source_ids:
+            graph.add_edge(node_id, END)
+
+    # ------------------------------------------------------------------ #
+    # Regular edges
+    # ------------------------------------------------------------------ #
+    for edge in edges:
+        source = edge["source"]
+        target = edge["target"]
+        if source in if_else_ids:
+            continue  # conditional edges handled below
+        graph.add_edge(source, target)
+
+    # ------------------------------------------------------------------ #
+    # Conditional edges for if_else nodes
+    # ------------------------------------------------------------------ #
+    if_else_nodes_map = {n["id"]: n for n in nodes if n["id"] in if_else_ids}
+    for node_id, node in if_else_nodes_map.items():
+        groups = node.get("groups") or node.get("conditionGroups") or []
+        default_branch = node.get("defaultBranch") or node.get("default_branch") or "false_branch"
+
+        # Collect branch → target mapping from edges that carry a "branch" key
+        branch_map: dict[str, str] = {
+            e["branch"]: e["target"]
+            for e in edges
+            if e["source"] == node_id and "branch" in e
+        }
+
+        if not branch_map:
+            # No branch labels → fall back to regular edges
+            for e in edges:
+                if e["source"] == node_id:
+                    graph.add_edge(node_id, e["target"])
+            continue
+
+        route_fn = build_conditional_edge_fn(node_id, groups, default_branch)
+        graph.add_conditional_edges(node_id, route_fn, branch_map)
 
     return graph

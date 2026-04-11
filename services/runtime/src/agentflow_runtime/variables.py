@@ -2,9 +2,10 @@
 from __future__ import annotations
 
 import re
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
-from .state import PipelineState
+if TYPE_CHECKING:
+    from .state import PipelineState
 
 # Matches {{#node_id.variable.path.parts#}}
 _REF_PATTERN = re.compile(r"\{\{#([^#]+)#\}\}")
@@ -15,7 +16,7 @@ class VariableResolutionError(Exception):
 
 
 class VariableResolver:
-    def __init__(self, state: PipelineState) -> None:
+    def __init__(self, state: "PipelineState") -> None:
         self._state = state
 
     def resolve(self, ref: dict | str | Any) -> Any:
