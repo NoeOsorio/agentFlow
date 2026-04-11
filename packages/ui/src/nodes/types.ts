@@ -21,7 +21,7 @@ export interface BaseNodeCardProps {
   type: NodeType
   label: string
   icon?: string
-  accentColor: string
+  accentColor?: string
   runStatus?: NodeRunStatus
   runError?: string
   selected?: boolean

@@ -6,6 +6,7 @@
  */
 import type { ReactElement } from 'react'
 import type { BaseNodeCardProps, NodeRunStatus } from './types'
+import { NODE_COLORS } from './colors'
 
 // ---------------------------------------------------------------------------
 // Internal: run-status dot (top-right indicator)
@@ -86,7 +87,7 @@ function containerClasses(
  * Shared visual anatomy for every AgentFlow canvas node.
  *
  * Renders a fixed-width (240 px) dark card with:
- * - A left color-accent bar driven by `accentColor`
+ * - A left color-accent bar driven by `accentColor` (falls back to NODE_COLORS[type])
  * - An optional emoji/text icon and a truncated label
  * - A run-status dot + icon in the top-right corner
  * - An animated ring overlay that reflects execution state
@@ -100,6 +101,7 @@ function containerClasses(
  * - `skipped`   → 50% opacity + grey dash
  */
 export function BaseNodeCard({
+  type,
   label,
   icon,
   accentColor,
@@ -108,6 +110,7 @@ export function BaseNodeCard({
   selected = false,
   children,
 }: BaseNodeCardProps) {
+  const resolvedAccent = accentColor ?? NODE_COLORS[type] ?? '#6b7280'
   const skippedClass = runStatus === 'skipped' ? 'opacity-50' : ''
   const ring = containerClasses(runStatus, selected)
 
@@ -124,7 +127,7 @@ export function BaseNodeCard({
       {/* Header row: accent bar + icon + label + status indicators */}
       <div
         className="flex items-center gap-2 px-3 py-2"
-        style={{ borderLeft: `3px solid ${accentColor}` }}
+        style={{ borderLeft: `3px solid ${resolvedAccent}` }}
       >
         {icon && (
           <span className="text-base leading-none flex-shrink-0" aria-hidden="true">
