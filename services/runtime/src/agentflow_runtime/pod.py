@@ -8,7 +8,10 @@ from __future__ import annotations
 
 import abc
 from dataclasses import dataclass, field
-from typing import Any
+from typing import TYPE_CHECKING, Any
+
+if TYPE_CHECKING:
+    from .identity import AgentIdentity, CompanyContext
 
 
 @dataclass
@@ -18,6 +21,10 @@ class AgentContext:
     pipeline_name: str
     client_data: dict[str, Any] = field(default_factory=dict)
     previous_outputs: dict[str, Any] = field(default_factory=dict)
+    # --- A2-PR-1: identity fields (optional — populated by runtime) ---
+    agent_identity: "AgentIdentity | None" = None
+    node_id: str = ""
+    company_context: "CompanyContext | None" = None
 
 
 @dataclass

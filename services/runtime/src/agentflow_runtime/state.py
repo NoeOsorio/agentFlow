@@ -1,10 +1,29 @@
 """LangGraph state definition for pipeline execution."""
 from __future__ import annotations
 
-from typing import Annotated, Any
+from dataclasses import dataclass
+from datetime import datetime
+from typing import Any
 
-from langgraph.graph.message import add_messages
 from pydantic import BaseModel, Field
+
+from .identity import CompanyContext
+
+
+@dataclass
+class NodeExecutionRecord:
+    """Per-node execution metadata tracked in PipelineState."""
+    node_id: str
+    node_type: str
+    agent_name: str | None
+    status: str                          # "pending" | "running" | "completed" | "failed" | "skipped"
+    started_at: datetime | None = None
+    finished_at: datetime | None = None
+    tokens_used: int = 0
+    cost_usd: float = 0.0
+    input_snapshot: dict | None = None
+    output_snapshot: dict | None = None
+    error: str | None = None
 
 
 class PipelineState(BaseModel):
@@ -23,3 +42,16 @@ class PipelineState(BaseModel):
     cost_usd: float = 0.0
     # Error message if pipeline failed
     error: str | None = None
+
+    # --- A2-PR-1: Agent identity & company context ---
+    company_name: str = ""
+    company_context: CompanyContext | None = Field(default=None)
+    current_agent_name: str | None = None
+    node_executions: dict[str, NodeExecutionRecord] = Field(default_factory=dict)
+    global_variables: dict[str, Any] = Field(default_factory=dict)
+    current_branch: str | None = None
+    iteration_index: int = 0
+    iteration_results: list[Any] = Field(default_factory=list)
+    streaming_channel: str | None = None
+
+    model_config = {"arbitrary_types_allowed": True}
