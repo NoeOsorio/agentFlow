@@ -5,6 +5,10 @@ description: Deploy and run your first pipeline in under 5 minutes
 
 import { Steps, Aside } from "@astrojs/starlight/components";
 
+<Aside type="note" title="Using the monorepo">
+  Build the SDK, then prefix commands with **`pnpm run af --`** from the repo root (see [Installation](/getting-started/installation/) for why `pnpm exec agentflow` does not work). Examples below use the global-style `agentflow …` form; in the monorepo run `pnpm run af --` instead of `agentflow` (keep the `--` before CLI flags).
+</Aside>
+
 <Steps>
 
 1. **Start the stack**

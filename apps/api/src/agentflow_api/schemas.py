@@ -45,6 +45,11 @@ class PipelineRead(BaseModel):
 class RunRead(BaseModel):
     id: uuid.UUID
     pipeline_id: uuid.UUID
+    pipeline_name: str | None = Field(
+        default=None,
+        description="Pipeline resource name (metadata.name), same as in the canvas URL.",
+    )
+    pipeline_namespace: str | None = Field(default=None, description="Pipeline namespace.")
     status: str
     created_at: datetime
     updated_at: datetime

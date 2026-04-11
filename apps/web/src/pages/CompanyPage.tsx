@@ -11,9 +11,10 @@ import { CompanyYamlPanel } from '../features/company/CompanyYamlPanel'
 type Tab = 'org' | 'agents' | 'yaml'
 
 export default function CompanyPage() {
-  const { id } = useParams<{ id: string }>()
+  const { companyName: companyNameParam } = useParams<{ companyName?: string }>()
+  const companyResourceName = companyNameParam ? decodeURIComponent(companyNameParam) : undefined
   const [tab, setTab] = useState<Tab>('agents')
-  const [loading, setLoading] = useState(!!id)
+  const [loading, setLoading] = useState(!!companyResourceName)
   const [modalOpen, setModalOpen] = useState(false)
   const [editingAgent, setEditingAgent] = useState<InlineAgent | undefined>(undefined)
   const [modalMode, setModalMode] = useState<'add' | 'edit'>('add')
@@ -29,10 +30,10 @@ export default function CompanyPage() {
   const agentHealth = useCompanyStore((s) => s.agentHealth)
 
   useEffect(() => {
-    if (!id) return
+    if (!companyResourceName) return
     setLoading(true)
-    loadCompany(id).finally(() => setLoading(false))
-  }, [id, loadCompany])
+    loadCompany(companyResourceName).finally(() => setLoading(false))
+  }, [companyResourceName, loadCompany])
 
   function handleEdit(agent: InlineAgent) {
     const isNew = !agent.name
@@ -64,7 +65,7 @@ export default function CompanyPage() {
     )
   }
 
-  if (!company && id) {
+  if (!company && companyResourceName) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-gray-950">
         <div className="space-y-2 text-center">
