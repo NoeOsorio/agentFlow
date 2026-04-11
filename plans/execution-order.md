@@ -117,7 +117,7 @@ This document defines the recommended execution order for all 11 implementation 
   - `services/runtime/src/agentflow_runtime/heartbeat.py` (new — `AgentHeartbeatMonitor`)
   - `services/runtime/src/agentflow_runtime/lifecycle.py` (new — `execute_with_lifecycle`)
   - `services/runtime/src/agentflow_runtime/budget.py` (new — `BudgetExceededError`, cost table)
-- [ ] **A2-PR-4** — Redis checkpoint + Streaming + Celery tasks + Tests
+- [x] **A2-PR-4** — Redis checkpoint + Streaming + Celery tasks + Tests
   - `services/runtime/src/agentflow_runtime/checkpoint.py` (update — `AgentFlowCheckpointer`)
   - `services/runtime/src/agentflow_runtime/executor.py` (update — checkpointer wired)
   - `services/runtime/src/agentflow_runtime/streaming.py` (new — `StreamEvent`, `StreamingExecutor`)
