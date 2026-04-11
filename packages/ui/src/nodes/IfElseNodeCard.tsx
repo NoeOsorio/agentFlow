@@ -28,7 +28,7 @@ export function IfElseNodeCard({ data, selected }: NodeProps<IfElseNodeType>) {
         {branchCount} condition{branchCount !== 1 ? 's' : ''}
       </div>
       <NodeHandle type="target" />
-      {branches.map((branch, i) => (
+      {branches.map((branch) => (
         <NodeHandle key={branch} type="source" id={branch} label={branch} />
       ))}
     </BaseNodeCard>

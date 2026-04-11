@@ -4,6 +4,7 @@
  * @provides NodeHandle
  * @depends_on @xyflow/react Handle, Position
  */
+import type React from 'react'
 import { Handle, Position } from '@xyflow/react'
 
 interface NodeHandleProps {
@@ -14,6 +15,8 @@ interface NodeHandleProps {
   label?: string
   /** Override default position (source→Right, target→Left) */
   position?: Position
+  /** Inline style overrides (e.g. top offset for multi-handle nodes) */
+  style?: React.CSSProperties
 }
 
 /**
@@ -23,7 +26,7 @@ interface NodeHandleProps {
  * - `source` (output): right side, white dot + gray border
  * - Conditional handle: same as source but renders a branch-name label
  */
-export function NodeHandle({ type, id, label, position }: NodeHandleProps) {
+export function NodeHandle({ type, id, label, position, style }: NodeHandleProps) {
   const isSource = type === 'source'
   const resolvedPosition = position ?? (isSource ? Position.Right : Position.Left)
 
@@ -32,7 +35,7 @@ export function NodeHandle({ type, id, label, position }: NodeHandleProps) {
     : 'w-3 h-3 !bg-black !border-2 !border-white rounded-full'
 
   return (
-    <div className="relative">
+    <div className="relative" style={style}>
       {label && (
         <span
           className={`absolute top-1/2 -translate-y-1/2 text-[10px] text-gray-400 whitespace-nowrap pointer-events-none ${

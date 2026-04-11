@@ -21,8 +21,11 @@
   },
   "dependencies": {
     "@agentflow/core": "workspace:*",
+    "@monaco-editor/react": "^4.7.0",
     "@xyflow/react": "^12.3.6",
-    "react": "^19.0.0"
+    "monaco-editor": "^0.55.1",
+    "react": "^19.0.0",
+    "react-hook-form": "^7.72.1"
   },
   "devDependencies": {
     "@testing-library/jest-dom": "^6.6.3",
