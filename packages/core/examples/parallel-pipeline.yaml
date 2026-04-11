@@ -1,0 +1,81 @@
+apiVersion: agentflow.ai/v1
+kind: Pipeline
+metadata:
+  name: parallel-research-pipeline
+  namespace: default
+spec:
+  nodes:
+    - id: start
+      type: start
+      outputs:
+        - key: topic
+          type: string
+          required: true
+
+    - id: llm_perspective_1
+      type: llm
+      label: Technical Perspective
+      model:
+        provider: anthropic
+        model_id: claude-sonnet-4-6
+      prompt:
+        system: You are a technical expert.
+        user: "Analyze from a technical perspective: {{#start.topic#}}"
+
+    - id: llm_perspective_2
+      type: llm
+      label: Business Perspective
+      model:
+        provider: openai
+        model_id: gpt-4o
+      prompt:
+        system: You are a business strategist.
+        user: "Analyze from a business perspective: {{#start.topic#}}"
+
+    - id: llm_perspective_3
+      type: llm
+      label: User Perspective
+      model:
+        provider: anthropic
+        model_id: claude-sonnet-4-6
+      prompt:
+        system: You are a UX researcher.
+        user: "Analyze from a user perspective: {{#start.topic#}}"
+
+    - id: aggregator
+      type: variable_aggregator
+      branches:
+        - llm_perspective_1
+        - llm_perspective_2
+        - llm_perspective_3
+      output_key: combined_analysis
+      strategy: merge
+
+    - id: end
+      type: end
+      inputs:
+        - node_id: aggregator
+          variable: combined_analysis
+
+  edges:
+    - id: edge-start-p1
+      source: start
+      target: llm_perspective_1
+    - id: edge-start-p2
+      source: start
+      target: llm_perspective_2
+    - id: edge-start-p3
+      source: start
+      target: llm_perspective_3
+    - id: edge-p1-agg
+      source: llm_perspective_1
+      target: aggregator
+    - id: edge-p2-agg
+      source: llm_perspective_2
+      target: aggregator
+    - id: edge-p3-agg
+      source: llm_perspective_3
+      target: aggregator
+    - id: edge-agg-end
+      source: aggregator
+      target: end
