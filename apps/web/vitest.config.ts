@@ -1,11 +1,18 @@
 // @plan B3-PR-1
 import { defineConfig } from 'vitest/config'
 import { resolve } from 'path'
+import react from '@vitejs/plugin-react'
 
 export default defineConfig({
+  plugins: [react()],
   test: {
     environment: 'node',
-    include: ['src/**/__tests__/**/*.test.ts'],
+    include: ['src/**/__tests__/**/*.test.ts', 'src/**/__tests__/**/*.test.tsx'],
+    setupFiles: ['./src/test-setup.ts'],
+    environmentMatchGlobs: [
+      ['src/pages/__tests__/**/*.test.tsx', 'jsdom'],
+      ['src/features/**/__tests__/**/*.test.tsx', 'jsdom'],
+    ],
   },
   resolve: {
     alias: {
