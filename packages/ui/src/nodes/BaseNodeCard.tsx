@@ -107,12 +107,19 @@ export function BaseNodeCard({
   accentColor,
   runStatus = 'idle',
   runError,
+  agentName,
+  agentRole,
+  tokensUsed,
   selected = false,
   children,
 }: BaseNodeCardProps) {
   const resolvedAccent = accentColor ?? NODE_COLORS[type] ?? '#6b7280'
   const skippedClass = runStatus === 'skipped' ? 'opacity-50' : ''
   const ring = containerClasses(runStatus, selected)
+
+  const errorTitle = [runError, agentName ? `Agent: ${agentName}` : '']
+    .filter(Boolean)
+    .join(' | ')
 
   return (
     <div
@@ -141,9 +148,21 @@ export function BaseNodeCard({
 
         <div className="flex items-center gap-1 flex-shrink-0">
           <RunStatusDot status={runStatus} />
-          <RunStatusIcon status={runStatus} error={runError} />
+          <RunStatusIcon status={runStatus} error={errorTitle || runError} />
         </div>
       </div>
+
+      {/* Agent identity overlay — shown during/after execution */}
+      {runStatus === 'running' && agentRole && (
+        <div className="px-3 py-1 text-xs text-yellow-400 italic border-t border-gray-700/50">
+          {agentRole} is thinking...
+        </div>
+      )}
+      {runStatus === 'completed' && agentRole && tokensUsed != null && (
+        <div className="px-3 py-1 text-xs text-green-400 border-t border-gray-700/50">
+          ✓ {agentRole} — {tokensUsed.toLocaleString()} tokens
+        </div>
+      )}
 
       {/* Node-type-specific body */}
       {children && (

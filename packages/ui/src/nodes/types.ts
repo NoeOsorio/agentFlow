@@ -14,6 +14,9 @@ export type NodeType = PipelineNode['type']
 export interface NodeRunState {
   status: NodeRunStatus
   error?: string
+  agentName?: string
+  agentRole?: string
+  tokensUsed?: number
 }
 
 export interface BaseNodeCardProps {
@@ -24,6 +27,9 @@ export interface BaseNodeCardProps {
   accentColor?: string
   runStatus?: NodeRunStatus
   runError?: string
+  agentName?: string
+  agentRole?: string
+  tokensUsed?: number
   selected?: boolean
   children?: ReactNode
 }
