@@ -6,6 +6,7 @@ import RunsPage from './pages/RunsPage'
 import CompaniesPage from './pages/CompaniesPage'
 import CompanyPage from './pages/CompanyPage'
 import AgentDetailPage from './pages/AgentDetailPage'
+import CompanyDashboardPage from './pages/CompanyDashboardPage'
 
 export default function App() {
   return (
@@ -17,6 +18,7 @@ export default function App() {
       <Route path="/canvas/:pipelineName" element={<CanvasPage />} />
       <Route path="/companies" element={<CompaniesPage />} />
       <Route path="/companies/new" element={<CompanyPage />} />
+      <Route path="/companies/:companyName/dashboard" element={<CompanyDashboardPage />} />
       <Route path="/companies/:companyName/agents/:agentName" element={<AgentDetailPage />} />
       <Route path="/companies/:companyName" element={<CompanyPage />} />
     </Routes>
