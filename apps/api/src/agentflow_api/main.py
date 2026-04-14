@@ -6,7 +6,7 @@ from pydantic import BaseModel
 
 from .config import settings
 from .database import engine
-from .routers import companies, pipelines, runs, triggers
+from .routers import companies, pipelines, runs, triggers, api_keys, agents
 
 
 @asynccontextmanager
@@ -34,6 +34,8 @@ app.include_router(companies.router, prefix="/api")
 app.include_router(pipelines.router, prefix="/api")
 app.include_router(runs.router, prefix="/api")
 app.include_router(triggers.router, prefix="/api")
+app.include_router(api_keys.router, prefix="/api")
+app.include_router(agents.router, prefix="/api")
 
 
 class ApplyPayload(BaseModel):
