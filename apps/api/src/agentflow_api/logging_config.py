@@ -15,10 +15,10 @@ def setup_logging() -> None:
     env = os.getenv("AGENTFLOW_ENV", "development")
     is_production = env == "production"
 
+    # stdlib add_logger_name requires logging.Logger; PrintLogger has no .name
     shared_processors: list[structlog.types.Processor] = [
         structlog.contextvars.merge_contextvars,
         structlog.stdlib.add_log_level,
-        structlog.stdlib.add_logger_name,
         structlog.processors.TimeStamper(fmt="iso"),
         structlog.processors.StackInfoRenderer(),
         structlog.processors.UnicodeDecoder(),

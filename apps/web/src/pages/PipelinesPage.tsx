@@ -122,8 +122,8 @@ export default function PipelinesPage() {
         body: JSON.stringify({ yaml_spec: DEFAULT_PIPELINE_YAML, name: 'untitled' }),
       })
       if (!res.ok) throw new Error(`HTTP ${res.status}`)
-      const data = (await res.json()) as { id: string }
-      navigate(`/canvas/${data.id}`)
+      const data = (await res.json()) as { id: string; name: string }
+      navigate(`/canvas/${encodeURIComponent(data.name)}`)
     } catch (err) {
       setError((err as Error).message)
     } finally {
@@ -132,11 +132,13 @@ export default function PipelinesPage() {
   }, [navigate])
 
   const handleDelete = useCallback(
-    async (id: string, name: string) => {
-      if (!window.confirm(`Delete pipeline "${name}"? This cannot be undone.`)) return
+    async (resourceName: string, id: string) => {
+      if (!window.confirm(`Delete pipeline "${resourceName}"? This cannot be undone.`)) return
       setDeletingId(id)
       try {
-        const res = await fetch(`/api/pipelines/${id}`, { method: 'DELETE' })
+        const res = await fetch(`/api/pipelines/${encodeURIComponent(resourceName)}`, {
+          method: 'DELETE',
+        })
         if (!res.ok) throw new Error(`HTTP ${res.status}`)
         setPipelines(prev => prev.filter(p => p.id !== id))
       } catch (err) {
@@ -221,7 +223,7 @@ export default function PipelinesPage() {
               >
                 {/* Click area → open canvas */}
                 <button
-                  onClick={() => navigate(`/canvas/${pipeline.id}`)}
+                  onClick={() => navigate(`/canvas/${encodeURIComponent(pipeline.name)}`)}
                   className="flex flex-1 items-center gap-3 text-left"
                 >
                   <div className="flex-1 min-w-0">
@@ -247,7 +249,7 @@ export default function PipelinesPage() {
 
                 {/* Delete button */}
                 <button
-                  onClick={() => handleDelete(pipeline.id, pipeline.name)}
+                  onClick={() => handleDelete(pipeline.name, pipeline.id)}
                   disabled={deletingId === pipeline.id}
                   title="Delete pipeline"
                   className="shrink-0 rounded px-2 py-1 text-xs text-gray-600 opacity-0 transition-opacity hover:bg-red-900/40 hover:text-red-400 group-hover:opacity-100 disabled:opacity-40"

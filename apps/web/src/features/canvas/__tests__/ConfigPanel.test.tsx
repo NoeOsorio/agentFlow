@@ -33,6 +33,11 @@ vi.mock('../../../store/pipelineStore', () => ({
   usePipelineStore: (sel: (s: typeof storeState) => unknown) => sel(storeState),
   useNodeValidationErrors: (nodeId: string) =>
     storeState.yamlErrors.filter(e => e.nodeId === nodeId),
+  useVariableScope: () => [],
+}))
+
+vi.mock('../../../store/companyStore', () => ({
+  useCompanyStore: (sel: (s: { company: null }) => unknown) => sel({ company: null }),
 }))
 
 // ---------------------------------------------------------------------------

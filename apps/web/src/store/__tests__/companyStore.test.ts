@@ -176,37 +176,13 @@ describe('deleteAgent', () => {
 // ---------------------------------------------------------------------------
 
 describe('refreshBudgets', () => {
-  it('calls GET /api/companies/{id}/agents and updates agentBudgets', async () => {
-    const budgetPayload = [
-      {
-        agentName: 'alice',
-        spentUsd: 12.5,
-        budgetUsd: 100,
-        remainingUsd: 87.5,
-        pctUsed: 12.5,
-        month: '2026-04',
-      },
-    ]
-    const mockFetch = vi.fn().mockResolvedValue({
-      ok: true,
-      json: async () => budgetPayload,
-    })
+  it('does not call the API (no GET /api/companies/{name}/agents on backend yet)', async () => {
+    const mockFetch = vi.fn()
     vi.stubGlobal('fetch', mockFetch)
 
     useCompanyStore.setState({ ...initialState, companyId: 'company-abc' })
     await useCompanyStore.getState().refreshBudgets()
 
-    expect(mockFetch).toHaveBeenCalledWith('/api/companies/company-abc/agents')
-    const { agentBudgets } = useCompanyStore.getState()
-    expect(agentBudgets['alice']).toBeDefined()
-    expect(agentBudgets['alice']!.remainingUsd).toBe(87.5)
-  })
-
-  it('does nothing when companyId is null', async () => {
-    const mockFetch = vi.fn()
-    vi.stubGlobal('fetch', mockFetch)
-
-    await useCompanyStore.getState().refreshBudgets()
     expect(mockFetch).not.toHaveBeenCalled()
   })
 })

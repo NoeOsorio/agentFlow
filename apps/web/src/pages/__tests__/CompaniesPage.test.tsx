@@ -85,7 +85,7 @@ describe('CompaniesPage', () => {
     await userEvent.click(btn)
   })
 
-  it('CompanyCard Delete button calls DELETE /api/companies/:id and removes the card', async () => {
+  it('CompanyCard Delete button calls DELETE /api/companies/{name} and removes the card', async () => {
     const mockFetch = vi
       .fn()
       .mockResolvedValueOnce({ ok: true, json: async () => FIXTURE_COMPANIES })
@@ -101,7 +101,7 @@ describe('CompaniesPage', () => {
     await userEvent.click(deleteButtons[0]!)
 
     await waitFor(() => {
-      expect(mockFetch).toHaveBeenCalledWith('/api/companies/co-1', { method: 'DELETE' })
+      expect(mockFetch).toHaveBeenCalledWith('/api/companies/acme-corp', { method: 'DELETE' })
     })
     await waitFor(() => {
       expect(screen.queryByText('acme-corp')).not.toBeInTheDocument()

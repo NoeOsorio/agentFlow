@@ -4,6 +4,7 @@
   "scripts": {
     "setup": "pnpm install && pnpm setup:python",
     "setup:python": "cd apps/api && uv sync --group dev && cd ../../services/runtime && uv sync --group dev",
+    "af": "node ./packages/sdk/run-cli.cjs",
     "build": "turbo run build",
     "dev": "turbo run dev",
     "lint": "turbo run lint",
