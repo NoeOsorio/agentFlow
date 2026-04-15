@@ -1,12 +1,11 @@
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from pydantic import BaseModel
 
 from .config import settings
 from .database import engine
-from .routers import companies, pipelines, runs, triggers
+from .routers import companies, pipelines, runs, triggers, api_keys, agents, resources, ws, internal
 
 
 @asynccontextmanager
@@ -34,75 +33,11 @@ app.include_router(companies.router, prefix="/api")
 app.include_router(pipelines.router, prefix="/api")
 app.include_router(runs.router, prefix="/api")
 app.include_router(triggers.router, prefix="/api")
-
-
-class ApplyPayload(BaseModel):
-    yaml_content: str
-
-
-@app.post("/api/apply")
-async def apply_manifest(payload: ApplyPayload):
-    """Apply a YAML manifest — creates or updates a company or pipeline."""
-    import yaml
-    from sqlalchemy.ext.asyncio import AsyncSession
-    from sqlalchemy import select
-
-    try:
-        manifest = yaml.safe_load(payload.yaml_content)
-    except yaml.YAMLError as exc:
-        raise HTTPException(status_code=422, detail=f"Invalid YAML: {exc}")
-
-    kind = (manifest or {}).get("kind", "").lower()
-    metadata = (manifest or {}).get("metadata", {})
-    name = metadata.get("name")
-
-    if not name:
-        raise HTTPException(status_code=422, detail="manifest.metadata.name is required")
-
-    from .database import SessionLocal
-    from .models import Company, Pipeline
-
-    if kind == "company":
-        async with SessionLocal() as db:
-            result = await db.execute(select(Company).where(Company.name == name))
-            existing = result.scalar_one_or_none()
-            if existing:
-                existing.yaml_spec = payload.yaml_content
-                existing.namespace = metadata.get("namespace", existing.namespace)
-                await db.commit()
-                return {"action": "updated", "kind": "Company", "name": name}
-            else:
-                company = Company(
-                    name=name,
-                    namespace=metadata.get("namespace", "default"),
-                    yaml_spec=payload.yaml_content,
-                )
-                db.add(company)
-                await db.commit()
-                return {"action": "created", "kind": "Company", "name": name}
-
-    elif kind == "pipeline":
-        async with SessionLocal() as db:
-            result = await db.execute(select(Pipeline).where(Pipeline.name == name))
-            existing = result.scalar_one_or_none()
-            if existing:
-                existing.yaml_spec = payload.yaml_content
-                existing.namespace = metadata.get("namespace", existing.namespace)
-                existing.version = existing.version + 1
-                await db.commit()
-                return {"action": "updated", "kind": "Pipeline", "name": name, "version": existing.version}
-            else:
-                pipeline = Pipeline(
-                    name=name,
-                    namespace=metadata.get("namespace", "default"),
-                    yaml_spec=payload.yaml_content,
-                )
-                db.add(pipeline)
-                await db.commit()
-                return {"action": "created", "kind": "Pipeline", "name": name, "version": 1}
-
-    else:
-        raise HTTPException(status_code=422, detail=f"Unknown kind: '{kind}'. Expected 'Company' or 'Pipeline'")
+app.include_router(api_keys.router, prefix="/api")
+app.include_router(agents.router, prefix="/api")
+app.include_router(resources.router, prefix="/api")
+app.include_router(ws.router, prefix="/api")
+app.include_router(internal.router, prefix="/api")
 
 
 @app.get("/health")
