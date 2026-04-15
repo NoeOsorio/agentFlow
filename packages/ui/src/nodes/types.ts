@@ -26,4 +26,7 @@ export interface BaseNodeCardProps {
   runError?: string
   selected?: boolean
   children?: ReactNode
+  agentName?: string
+  agentRole?: string
+  tokensUsed?: number
 }

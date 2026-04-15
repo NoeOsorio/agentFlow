@@ -8,6 +8,7 @@ const RunsPage = lazy(() => import('./pages/RunsPage'))
 const CompaniesPage = lazy(() => import('./pages/CompaniesPage'))
 const CompanyPage = lazy(() => import('./pages/CompanyPage'))
 const AgentDetailPage = lazy(() => import('./pages/AgentDetailPage'))
+const CompanyDashboardPage = lazy(() => import('./pages/CompanyDashboardPage'))
 
 export default function App() {
   return (
@@ -21,6 +22,7 @@ export default function App() {
         <Route path="/companies" element={<CompaniesPage />} />
         <Route path="/companies/new" element={<CompanyPage />} />
         <Route path="/companies/:companyName/agents/:agentName" element={<AgentDetailPage />} />
+        <Route path="/companies/:companyName/dashboard" element={<CompanyDashboardPage />} />
         <Route path="/companies/:companyName" element={<CompanyPage />} />
       </Routes>
     </Suspense>

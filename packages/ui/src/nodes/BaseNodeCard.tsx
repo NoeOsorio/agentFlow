@@ -109,6 +109,9 @@ export function BaseNodeCard({
   runError,
   selected = false,
   children,
+  agentName,
+  agentRole,
+  tokensUsed,
 }: BaseNodeCardProps) {
   const resolvedAccent = accentColor ?? NODE_COLORS[type] ?? '#6b7280'
   const skippedClass = runStatus === 'skipped' ? 'opacity-50' : ''
@@ -144,6 +147,20 @@ export function BaseNodeCard({
           <RunStatusIcon status={runStatus} error={runError} />
         </div>
       </div>
+
+      {/* Agent identity sub-row */}
+      {(runStatus === 'running' || runStatus === 'completed') && agentName && agentRole && (
+        <div className="px-3 pt-1 pb-0" style={{ borderLeft: `3px solid ${resolvedAccent}` }}>
+          {runStatus === 'running' && (
+            <span className="text-yellow-300 text-xs italic">{agentRole} is thinking...</span>
+          )}
+          {runStatus === 'completed' && (
+            <span className="text-green-400 text-xs">
+              ✓ {agentRole}{tokensUsed !== undefined ? ` — ${tokensUsed.toLocaleString()} tokens` : ''}
+            </span>
+          )}
+        </div>
+      )}
 
       {/* Node-type-specific body */}
       {children && (
