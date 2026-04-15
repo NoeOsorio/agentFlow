@@ -1,7 +1,7 @@
 // @plan B1-PR-2
 // Left-sidebar node palette — company-aware.
 // Company Agents section shows agents from the active company as first-class draggable items.
-import { useState, useMemo } from 'react'
+import React, { useState, useMemo } from 'react'
 import { NODE_COLORS } from '@agentflow/ui'
 import { usePipelineStore } from '../../store/pipelineStore'
 import { useCompanyStore } from '../../store/companyStore'
@@ -92,7 +92,7 @@ interface AgentPaletteItemProps {
   pctUsed?: number
 }
 
-function AgentPaletteItem({ name, role, remainingUsd, pctUsed }: AgentPaletteItemProps) {
+const AgentPaletteItem = React.memo(function AgentPaletteItem({ name, role, remainingUsd, pctUsed }: AgentPaletteItemProps) {
   const color = roleColor(role)
   const budgetLow = pctUsed !== undefined && pctUsed > 0.8
 
@@ -135,13 +135,13 @@ function AgentPaletteItem({ name, role, remainingUsd, pctUsed }: AgentPaletteIte
       )}
     </div>
   )
-}
+})
 
 // ---------------------------------------------------------------------------
 // PaletteItem (static node types)
 // ---------------------------------------------------------------------------
 
-function StaticPaletteItem({ type, label }: PaletteItem) {
+const StaticPaletteItem = React.memo(function StaticPaletteItem({ type, label }: PaletteItem) {
   const color = (NODE_COLORS as Record<string, string>)[type] ?? '#6b7280'
 
   const onDragStart = (event: React.DragEvent<HTMLDivElement>) => {
@@ -163,7 +163,7 @@ function StaticPaletteItem({ type, label }: PaletteItem) {
       <span className="text-sm text-gray-300">{label}</span>
     </div>
   )
-}
+})
 
 // ---------------------------------------------------------------------------
 // NodePalette

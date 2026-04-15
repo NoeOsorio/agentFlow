@@ -14,30 +14,69 @@ import { Tabs, TabItem, Steps, Aside } from "@astrojs/starlight/components";
 
 <Tabs>
   <TabItem label="pnpm (monorepo)">
-    The CLI is bundled in `@agentflow/sdk`. In the monorepo, install workspace dependencies:
+    The CLI ships in **`@agentflow/sdk`**. From the **repository root**:
 
     ```bash
     pnpm install
-    pnpm build
+    pnpm --filter @agentflow/sdk build
     ```
 
-    Then run via:
+    The `bin` entry points at `dist/cli/index.js`, which **does not exist** until you run `build`.
+
+    ### Recommended: root script `af`
+
+    The root `package.json` defines **`af`**, which runs `packages/sdk/run-cli.cjs`. That launcher forwards arguments to the real CLI and strips an extra `--` that `pnpm run … --` passes through (so Commander receives a clean argv).
 
     ```bash
-    pnpm --filter @agentflow/sdk exec agentflow --help
+    pnpm run af -- --help
+    pnpm run af -- config set-context --url http://localhost:8000
+    pnpm run af -- get pipelines
+    pnpm run af -- run my-pipeline
     ```
+
+    Always include **`--`** after `af` before any CLI flags or subcommands.
+
+    ### Alternative: SDK package script
+
+    ```bash
+    pnpm --filter @agentflow/sdk run agentflow -- --help
+    ```
+
+    This uses the same `run-cli.cjs` launcher from `packages/sdk/package.json`.
+
+    ### Direct `node` (no pnpm args)
+
+    ```bash
+    node packages/sdk/dist/cli/index.js --help
+    ```
+
+    ### Do not use `pnpm exec agentflow` here
+
+    Workspace packages typically **do not** put their `bin` on `PATH` for `pnpm exec`, so `pnpm --filter @agentflow/sdk exec agentflow` fails with “command not found”. The monorepo root is also named `agentflow`, which is easy to confuse with the CLI. Use **`pnpm run af --`** or the SDK script above instead.
+
   </TabItem>
   <TabItem label="npm (global)">
+    When the package is published and installed globally:
+
     ```bash
     npm install -g @agentflow/sdk
     agentflow --help
     ```
+
+    You still need a **built** `dist/` (publish flow should include it). For day-to-day development, use the monorepo instructions in the other tab.
+
   </TabItem>
 </Tabs>
 
 ## Connect to the API
 
-Before running commands, tell the CLI where your API lives:
+Before running commands, point the CLI at your API. From the monorepo, use the `af` wrapper:
+
+```bash
+pnpm run af -- config set-context --url http://localhost:8000
+```
+
+With a global install:
 
 ```bash
 agentflow config set-context --url http://localhost:8000
@@ -49,21 +88,29 @@ For authenticated environments, include your API key:
 agentflow config set-context --url https://api.example.com --key sk-your-key
 ```
 
+(Config examples with `pnpm run af --` work the same: `pnpm run af -- config set-context --url …`.)
+
 Config is saved to `~/.agentflow/config.json`.
 
 <Aside type="tip">
-  The default API URL is `http://localhost:8000`. If you're running the full stack with Docker, no configuration is needed.
+  The default API URL is `http://localhost:8000`. If you're running the API locally on that port, you can skip `set-context`.
 </Aside>
 
 ## Verify
 
 ```bash
-agentflow config view
-agentflow get pipelines
+pnpm run af -- config view
+pnpm run af -- get pipelines
 ```
+
+(Global install: `agentflow config view`, `agentflow get pipelines`.)
 
 If you see `error: cannot connect to API`, start the API first:
 
 ```bash
 docker compose up api -d
 ```
+
+<Aside type="caution" title="Runs stay pending until a worker exists">
+  `agentflow run` calls the API and creates a **pending** run. Progress to **running** / **completed** requires a runtime worker that consumes the queue; that wiring is not always enabled in minimal dev setups. See the main repo README and `plans/` for execution architecture.
+</Aside>

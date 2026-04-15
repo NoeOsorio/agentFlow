@@ -100,6 +100,43 @@ docker compose up
 # Docs → http://localhost:8000/docs
 ```
 
+## AgentFlow CLI
+
+The kubectl-style **`agentflow`** command is implemented in **`packages/sdk`** and calls the same HTTP API as the web app. The compiled entrypoint is `packages/sdk/dist/cli/index.js`.
+
+**1. Build the SDK** (required once, or after changing the CLI):
+
+```bash
+pnpm --filter @agentflow/sdk build
+```
+
+**2. Run it from the repo root** using the **`af`** script (recommended):
+
+```bash
+pnpm run af -- --help
+pnpm run af -- config set-context --url http://localhost:8000
+pnpm run af -- get pipelines
+pnpm run af -- run <pipeline-name>
+```
+
+The `--` separates pnpm arguments from CLI arguments. The wrapper **`packages/sdk/run-cli.cjs`** removes an extra `--` that pnpm injects so Commander parses flags correctly.
+
+**Alternative — SDK package script:**
+
+```bash
+pnpm --filter @agentflow/sdk run agentflow -- --help
+```
+
+**Alternative — Node only:**
+
+```bash
+node packages/sdk/dist/cli/index.js --help
+```
+
+**Why not `pnpm exec agentflow`?** In this workspace, `pnpm exec agentflow` usually fails with “command not found” because pnpm does not expose `@agentflow/sdk`’s `bin` on `PATH` for `exec` the way a global install does. The root package is also named `agentflow`, which is easy to confuse with the CLI binary.
+
+**Runs and execution:** `agentflow run` (and **Run** in the canvas) call `POST /api/pipelines/{name}/execute` and create a **pending** run in the database. Status moves to running/completed only after a **runtime worker** is wired up to consume that queue (see `plans/` and `services/runtime/`).
+
 ---
 
 ## Monorepo Structure
@@ -110,7 +147,7 @@ apps/api/          FastAPI — pipeline CRUD and run management
 services/runtime/  LangGraph DAG engine and AgentPod base (Python)
 packages/core/     YAML schema + Zod parser, shared TS types
 packages/ui/       Shared React component library
-packages/sdk/      TypeScript SDK for pipeline authoring
+packages/sdk/      TypeScript SDK + `agentflow` CLI (see [AgentFlow CLI](#agentflow-cli))
 ```
 
 ---

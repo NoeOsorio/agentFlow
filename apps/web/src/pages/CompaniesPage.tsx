@@ -4,6 +4,29 @@ import { useNavigate } from 'react-router-dom'
 import Layout from '../components/Layout'
 import CompanyCard, { type CompanyListItem } from '../features/company/CompanyCard'
 
+/** Map API `CompanyRead` into list card fields; preserves optional stats if present (e.g. tests). */
+function mapCompanyFromApi(raw: {
+  id: string
+  name: string
+  namespace: string
+  updated_at: string
+  agent_count?: number
+  total_budget_usd?: number | null
+  active_agents?: number
+  idle_agents?: number
+}): CompanyListItem {
+  return {
+    id: raw.id,
+    name: raw.name,
+    namespace: raw.namespace,
+    agent_count: raw.agent_count ?? 0,
+    total_budget_usd: raw.total_budget_usd ?? null,
+    active_agents: raw.active_agents ?? 0,
+    idle_agents: raw.idle_agents ?? 0,
+    updated_at: raw.updated_at,
+  }
+}
+
 export default function CompaniesPage() {
   const navigate = useNavigate()
   const [companies, setCompanies] = useState<CompanyListItem[]>([])
@@ -13,14 +36,14 @@ export default function CompaniesPage() {
   useEffect(() => {
     let cancelled = false
     setLoading(true)
-    fetch('/api/companies')
+    fetch('/api/companies/')
       .then((res) => {
         if (!res.ok) throw new Error(`Failed to load companies: ${res.status}`)
-        return res.json() as Promise<CompanyListItem[]>
+        return res.json() as Promise<Parameters<typeof mapCompanyFromApi>[0][]>
       })
       .then((data) => {
         if (!cancelled) {
-          setCompanies(data)
+          setCompanies(Array.isArray(data) ? data.map(mapCompanyFromApi) : [])
           setLoading(false)
         }
       })
@@ -35,10 +58,10 @@ export default function CompaniesPage() {
     }
   }, [])
 
-  async function handleDelete(id: string) {
-    const res = await fetch(`/api/companies/${id}`, { method: 'DELETE' })
+  async function handleDelete(name: string) {
+    const res = await fetch(`/api/companies/${encodeURIComponent(name)}`, { method: 'DELETE' })
     if (res.ok) {
-      setCompanies((prev) => prev.filter((c) => c.id !== id))
+      setCompanies((prev) => prev.filter((c) => c.name !== name))
     }
   }
 

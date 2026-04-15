@@ -321,7 +321,7 @@ describe('pipelineStore', () => {
   // ---------- savePipeline --------------------------------------------------
 
   describe('savePipeline', () => {
-    it('calls PUT /api/pipelines/{id} with yaml_spec', async () => {
+    it('calls POST /api/apply with yaml_content', async () => {
       const mockFetch = vi.fn().mockResolvedValue({ ok: true, json: async () => ({}) })
       vi.stubGlobal('fetch', mockFetch)
 
@@ -329,19 +329,20 @@ describe('pipelineStore', () => {
       await usePipelineStore.getState().savePipeline()
 
       expect(mockFetch).toHaveBeenCalledWith(
-        '/api/pipelines/pipeline-123',
+        '/api/apply',
         expect.objectContaining({
-          method: 'PUT',
-          body: JSON.stringify({ yaml_spec: 'some: yaml' }),
+          method: 'POST',
+          body: JSON.stringify({ yaml_content: 'some: yaml' }),
         }),
       )
       expect(usePipelineStore.getState().saveStatus).toBe('saved')
     })
 
-    it('does nothing if pipelineId is null', async () => {
+    it('does nothing if yamlSpec is empty', async () => {
       const mockFetch = vi.fn()
       vi.stubGlobal('fetch', mockFetch)
 
+      usePipelineStore.setState({ pipelineId: 'pipeline-123', yamlSpec: '' })
       await usePipelineStore.getState().savePipeline()
       expect(mockFetch).not.toHaveBeenCalled()
     })

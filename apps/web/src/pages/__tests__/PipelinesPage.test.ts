@@ -36,18 +36,18 @@ async function fetchPipelines(): Promise<PipelineListItem[]> {
   return res.json() as Promise<PipelineListItem[]>
 }
 
-async function createPipeline(): Promise<{ id: string }> {
+async function createPipeline(): Promise<{ id: string; name: string }> {
   const res = await fetch('/api/pipelines/', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ yaml_spec: DEFAULT_PIPELINE_YAML, name: 'untitled' }),
   })
   if (!res.ok) throw new Error(`HTTP ${res.status}`)
-  return res.json() as Promise<{ id: string }>
+  return res.json() as Promise<{ id: string; name: string }>
 }
 
-async function deletePipeline(id: string): Promise<void> {
-  const res = await fetch(`/api/pipelines/${id}`, { method: 'DELETE' })
+async function deletePipeline(name: string): Promise<void> {
+  const res = await fetch(`/api/pipelines/${encodeURIComponent(name)}`, { method: 'DELETE' })
   if (!res.ok) throw new Error(`HTTP ${res.status}`)
 }
 
@@ -60,10 +60,10 @@ describe('PipelinesPage API logic', () => {
     vi.restoreAllMocks()
   })
 
-  it('POST /api/pipelines/ sends default YAML and returns id for navigation', async () => {
+  it('POST /api/pipelines/ sends default YAML and returns name for canvas route', async () => {
     const mockFetch = vi.fn().mockResolvedValueOnce({
       ok: true,
-      json: async () => ({ id: 'pipe-abc' }),
+      json: async () => ({ id: 'pipe-abc', name: 'untitled' }),
     } as Response)
     global.fetch = mockFetch
 
@@ -77,6 +77,7 @@ describe('PipelinesPage API logic', () => {
     expect(body.yaml_spec).toContain('agentflow.ai/v1')
     expect(body.name).toBe('untitled')
     expect(result.id).toBe('pipe-abc')
+    expect(result.name).toBe('untitled')
   })
 
   it('pipeline list includes company badge data when company_ref is set', async () => {
@@ -96,7 +97,7 @@ describe('PipelinesPage API logic', () => {
     expect(pipelines[1]?.company_ref?.name).toBe('acme-corp')
   })
 
-  it('DELETE /api/pipelines/:id is called on delete', async () => {
+  it('DELETE /api/pipelines/{name} is called on delete', async () => {
     const mockFetch = vi.fn().mockResolvedValueOnce({ ok: true } as Response)
     global.fetch = mockFetch
 
