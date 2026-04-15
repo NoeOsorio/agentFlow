@@ -1,5 +1,6 @@
 // @plan B1-PR-3
 import { useMemo, useState } from 'react'
+import { useShallow } from 'zustand/react/shallow'
 import { useCompanyStore } from '../../store/companyStore'
 import { usePipelineStore, useNodeValidationErrors, useVariableScope } from '../../store/pipelineStore'
 import { nodeConfigForms } from './nodeConfigForms'
@@ -40,11 +41,9 @@ const NODE_TYPE_ICONS: Record<string, string> = {
 }
 
 export function ConfigPanel() {
-  const selectedNodeId = usePipelineStore(s => s.selectedNodeId)
-  const nodes = usePipelineStore(s => s.nodes)
-  const deleteNode = usePipelineStore(s => s.deleteNode)
-  const updateNodeConfig = usePipelineStore(s => s.updateNodeConfig)
-  const deselectNode = usePipelineStore(s => s.deselectNode)
+  const { selectedNodeId, nodes, deleteNode, updateNodeConfig, deselectNode } = usePipelineStore(
+    useShallow(s => ({ selectedNodeId: s.selectedNodeId, nodes: s.nodes, deleteNode: s.deleteNode, updateNodeConfig: s.updateNodeConfig, deselectNode: s.deselectNode }))
+  )
   const errors = useNodeValidationErrors(selectedNodeId ?? '')
   const company = useCompanyStore(s => s.company)
   const availableAgents = company?.spec.agents ?? []

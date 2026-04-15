@@ -1,6 +1,7 @@
 // @plan B1-PR-1 (updated in B1-PR-2)
 import { useEffect, useState } from 'react'
 import { useParams, Link } from 'react-router-dom'
+import { useShallow } from 'zustand/react/shallow'
 import { usePipelineStore } from '../store/pipelineStore'
 import { useCompanyStore } from '../store/companyStore'
 import { CanvasEditor } from '../features/canvas/CanvasEditor'
@@ -14,10 +15,9 @@ export default function CanvasPage() {
   const pipelineResourceName = pipelineNameParam ? decodeURIComponent(pipelineNameParam) : undefined
   const [loading, setLoading] = useState(!!pipelineResourceName)
 
-  const loadPipeline = usePipelineStore(s => s.loadPipeline)
-  const saveStatus = usePipelineStore(s => s.saveStatus)
-  const nodes = usePipelineStore(s => s.nodes)
-  const companyRef = usePipelineStore(s => s.companyRef)
+  const { loadPipeline, saveStatus, nodes, companyRef } = usePipelineStore(
+    useShallow(s => ({ loadPipeline: s.loadPipeline, saveStatus: s.saveStatus, nodes: s.nodes, companyRef: s.companyRef }))
+  )
   const loadCompany = useCompanyStore(s => s.loadCompany)
 
   useEffect(() => {
