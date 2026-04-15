@@ -55,6 +55,8 @@ class PipelineState(BaseModel):
     current_agent_name: str | None = None
     node_executions: Annotated[dict[str, Any], _merge_dicts] = Field(default_factory=dict)
     global_variables: Annotated[dict[str, Any], _merge_dicts] = Field(default_factory=dict)
+    # Cumulative cost per agent name — used for budget enforcement in AgentPodNodeExecutor
+    agent_costs: Annotated[dict[str, float], _merge_dicts] = Field(default_factory=dict)
     current_branch: str | None = None
     iteration_index: int = 0
     iteration_results: Annotated[list[Any], operator.add] = Field(default_factory=list)
