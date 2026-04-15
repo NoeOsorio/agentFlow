@@ -16,6 +16,7 @@ dist/
 build/
 .next/
 out/
+.astro/
 *.tsbuildinfo
 node-compile-cache/
 apps/web/vite.config.d.ts
