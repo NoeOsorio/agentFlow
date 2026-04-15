@@ -111,11 +111,15 @@ async def report_run_event(
         from ..config import settings
         r = aioredis.from_url(settings.redis_url)
         await r.publish(f"agentflow:stream:{run_id}", json.dumps({
-            "event": body.get("event_type", "node_complete"),
+            "type": body.get("event_type", "node_complete"),
             "node_id": node_id,
             "agent_name": agent_name,
+            "agent_role": body.get("agent_role", ""),
+            "company_name": body.get("company_name", ""),
             "status": status,
+            "tokens_used": tokens_used,
             "cost_usd": cost_usd,
+            "error": error,
             "timestamp": ts.isoformat(),
         }))
         await r.aclose()
@@ -148,7 +152,7 @@ async def complete_run(
         from ..config import settings
         r = aioredis.from_url(settings.redis_url)
         await r.publish(f"agentflow:stream:{run_id}", json.dumps({
-            "event": "pipeline_complete" if final_status == "completed" else "pipeline_error",
+            "type": "pipeline_complete" if final_status == "completed" else "pipeline_error",
             "run_id": str(run_id),
             "status": final_status,
         }))
