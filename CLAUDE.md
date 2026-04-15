@@ -88,3 +88,32 @@ Both Python apps (`apps/api`, `services/runtime`) use `pyproject.toml` with `hat
 - The `apps/web/` frontend prefers **Vite + React + Tailwind** — do not introduce Next.js.
 - The YAML spec supports `extends` for pipeline inheritance (planned; not yet implemented in parser).
 - Cost estimation in `dag.py` is a rough placeholder (`tokens * 0.000003`).
+
+## Git & PRs
+
+- When creating a PR, always output the PR URL prominently in your response — never bury it in a summary.
+- When reporting PR status, list each PR with its number and full URL.
+- When asked to use a separate worktree, always use `git worktree add <path> <branch>` BEFORE making any changes. Never work directly in the main worktree when a worktree is requested.
+- Always push to the remote and create the PR before declaring implementation complete.
+
+## Planning & Scope
+
+- When asked to implement a specific scope (e.g., B0, A1, PR-3), stay **strictly within that scope**. Do not touch adjacent work items.
+- If you notice related work needed outside the requested scope, mention it but do not implement it without explicit approval.
+- Confirm scope boundaries before starting any multi-PR plan.
+
+## Build & Validation
+
+- For TypeScript work: always run `pnpm lint` (which runs `tsc --noEmit` across all packages) before declaring work complete.
+- Run the full test suite before declaring work complete. Fix all failures — do not ask the user for help with test failures, debug them yourself.
+- Watch for: `noUncheckedIndexedAccess` errors, duplicate exports, incorrect generic parameters.
+
+## Testing
+
+- After any rebase onto main, re-run all tests and verify that example YAML files and test fixtures still match the current Zod schema requirements. Schemas may have tightened on main.
+- Before implementing a feature, write a smoke test to verify the test infrastructure works (correct runner config, available libraries, mock paths). Fix any config issues before writing feature code.
+
+## Communication Style
+
+- When the user asks about running a specific command (e.g., a migration, a single test), answer that specific question directly. Do not explain how to run the entire project.
+- Keep responses terse. Do not summarize what you just did at the end — the diff speaks for itself.
