@@ -19,7 +19,8 @@
     "build": "tsup",
     "dev": "tsup --watch",
     "lint": "tsc --noEmit",
-    "clean": "rm -rf dist"
+    "clean": "rm -rf dist",
+    "agentflow": "node ./run-cli.cjs"
   },
   "dependencies": {
     "@agentflow/core": "workspace:*",

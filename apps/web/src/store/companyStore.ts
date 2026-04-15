@@ -28,7 +28,8 @@ interface CompanyStore {
   agentHealth: Record<string, AgentHealthState>
 
   // Actions
-  loadCompany(id: string): Promise<void>
+  /** `companyName` is the resource name in `/api/companies/{name}` (not UUID). */
+  loadCompany(companyName: string): Promise<void>
   saveCompany(): Promise<void>
   setYamlSpec(yaml: string): void
   addAgent(agent: InlineAgent): void
@@ -51,31 +52,14 @@ let _saveTimer: ReturnType<typeof setTimeout> | null = null
 
 let _heartbeatWs: WebSocket | null = null
 
+/** Backend has no `/api/ws/...` yet; keep hook for a future WebSocket feed. */
 function _connectHeartbeat(
-  companyId: string,
-  onMessage: (health: import('./types').AgentHealthState) => void,
+  _companyName: string,
+  _onMessage: (health: import('./types').AgentHealthState) => void,
 ): void {
   if (_heartbeatWs) {
     _heartbeatWs.close()
     _heartbeatWs = null
-  }
-  const wsUrl = `ws://localhost:8000/api/ws/companies/${companyId}/agents`
-  try {
-    const ws = new WebSocket(wsUrl)
-    _heartbeatWs = ws
-    ws.onmessage = (event: MessageEvent) => {
-      try {
-        const payload = JSON.parse(event.data as string) as import('./types').AgentHealthState
-        onMessage(payload)
-      } catch {
-        // ignore malformed messages
-      }
-    }
-    ws.onerror = () => {
-      // silently ignore — heartbeat is best-effort
-    }
-  } catch {
-    // WebSocket not available in test environment — silently ignore
   }
 }
 
@@ -102,26 +86,26 @@ export const useCompanyStore = create<CompanyStore>()((set, get) => ({
   agentBudgets: {},
   agentHealth: {},
 
-  async loadCompany(id) {
-    const res = await fetch(`/api/companies/${id}`)
+  async loadCompany(companyName) {
+    const res = await fetch(`/api/companies/${encodeURIComponent(companyName)}`)
     if (!res.ok) throw new Error(`Failed to load company: ${res.status}`)
-    const data = (await res.json()) as { yaml_spec: string }
+    const data = (await res.json()) as { yaml_spec: string; id: string }
     get().setYamlSpec(data.yaml_spec)
-    set({ companyId: id })
-    _connectHeartbeat(id, (health) => {
+    set({ companyId: data.id })
+    _connectHeartbeat(companyName, (health) => {
       get().setAgentHealth(health.agentName, health)
     })
   },
 
   async saveCompany() {
-    const { companyId, yamlSpec } = get()
-    if (!companyId) return
+    const { yamlSpec } = get()
+    if (!yamlSpec.trim()) return
     set({ saveStatus: 'saving' })
     try {
-      const res = await fetch(`/api/companies/${companyId}`, {
-        method: 'PUT',
+      const res = await fetch('/api/apply', {
+        method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ yaml_spec: yamlSpec }),
+        body: JSON.stringify({ yaml_content: yamlSpec }),
       })
       if (!res.ok) throw new Error(`Save failed: ${res.status}`)
       set({ saveStatus: 'saved' })
@@ -206,15 +190,7 @@ export const useCompanyStore = create<CompanyStore>()((set, get) => ({
   },
 
   async refreshBudgets() {
-    const { companyId } = get()
-    if (!companyId) return
-    const res = await fetch(`/api/companies/${companyId}/agents`)
-    if (!res.ok) return
-    const data = (await res.json()) as AgentBudgetState[]
-    const budgets: Record<string, AgentBudgetState> = {}
-    for (const b of data) {
-      budgets[b.agentName] = b
-    }
-    set({ agentBudgets: budgets })
+    // No GET /api/companies/{name}/agents on the backend yet.
+    return
   },
 }))

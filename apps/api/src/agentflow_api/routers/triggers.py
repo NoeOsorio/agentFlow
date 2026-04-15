@@ -1,12 +1,16 @@
 import json
 import uuid
 
-from fastapi import APIRouter, Depends, HTTPException
-from sqlalchemy.ext.asyncio import AsyncSession
 from typing import Annotated
+
+from fastapi import APIRouter, Depends, HTTPException
+from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import joinedload
 
 from ..database import get_db
 from ..models import Pipeline, Run, RunStatus
+from ..run_read import run_to_read
 from ..schemas import TriggerPayload, RunRead
 
 router = APIRouter(prefix="/triggers", tags=["triggers"])
@@ -31,9 +35,12 @@ async def trigger_pipeline(
     )
     db.add(run)
     await db.commit()
-    await db.refresh(run)
 
     # TODO: dispatch to Celery worker
     # background_tasks.add_task(dispatch_run, run.id)
 
-    return run
+    loaded = await db.execute(
+        select(Run).options(joinedload(Run.pipeline)).where(Run.id == run.id),
+    )
+    run_loaded = loaded.unique().scalar_one()
+    return run_to_read(run_loaded)
