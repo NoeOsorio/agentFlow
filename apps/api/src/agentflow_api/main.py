@@ -5,7 +5,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from .config import settings
 from .database import engine
-from .routers import companies, pipelines, runs, triggers, api_keys, agents, resources
+from .routers import companies, pipelines, runs, triggers, api_keys, agents, resources, ws, internal
 
 
 @asynccontextmanager
@@ -36,6 +36,8 @@ app.include_router(triggers.router, prefix="/api")
 app.include_router(api_keys.router, prefix="/api")
 app.include_router(agents.router, prefix="/api")
 app.include_router(resources.router, prefix="/api")
+app.include_router(ws.router, prefix="/api")
+app.include_router(internal.router, prefix="/api")
 
 
 @app.get("/health")
