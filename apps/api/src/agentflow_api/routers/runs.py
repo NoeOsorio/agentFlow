@@ -92,7 +92,6 @@ async def execute_pipeline(pipeline_id: uuid.UUID, body: dict, db: DB):
     db.add(run)
     await db.commit()
 
-    # Dispatch Celery task if available
     try:
         from agentflow_runtime.tasks import execute_pipeline as celery_task
         company_yaml = None
@@ -106,7 +105,7 @@ async def execute_pipeline(pipeline_id: uuid.UUID, body: dict, db: DB):
             trigger_data=body.get("inputs", {}),
         )
     except ImportError:
-        pass  # Runtime not installed in this service
+        pass
 
     result = await db.execute(
         select(Run).options(joinedload(Run.pipeline)).where(Run.id == run.id)
@@ -153,4 +152,4 @@ async def _publish_control(run_id: uuid.UUID, command: str) -> None:
         await r.publish(f"agentflow:control:{run_id}", command)
         await r.aclose()
     except Exception:
-        pass  # Redis optional
+        pass

@@ -113,7 +113,6 @@ async def create_schedule(pipeline_id: uuid.UUID, body: dict, db: DB):
     cron = body.get("cron", "")
     if not cron:
         raise HTTPException(status_code=422, detail="cron expression is required")
-    # TODO: wire into Celery Beat dynamic schedules
     return {"pipeline_id": str(pipeline_id), "cron": cron, "status": "scheduled"}
 
 
@@ -123,4 +122,3 @@ async def delete_schedule(pipeline_id: uuid.UUID, db: DB):
     pipeline = await db.get(Pipeline, pipeline_id)
     if not pipeline:
         raise HTTPException(status_code=404, detail="Pipeline not found")
-    # TODO: remove from Celery Beat

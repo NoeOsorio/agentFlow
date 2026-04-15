@@ -26,8 +26,21 @@ function CompanySelector({ value, onChange }: CompanySelectorProps) {
 
   useEffect(() => {
     fetch('/api/companies/')
-      .then(r => r.ok ? r.json() as Promise<CompanyItem[]> : [])
-      .then(data => setCompanies(Array.isArray(data) ? data : []))
+      .then((r) => (r.ok ? r.json() : []))
+      .then((data: unknown) => {
+        const rows = Array.isArray(data) ? data : []
+        setCompanies(
+          rows
+            .map((row) => {
+              const r = row as { name?: string; namespace?: string }
+              return {
+                name: String(r.name ?? ''),
+                namespace: String(r.namespace ?? 'default'),
+              }
+            })
+            .filter((c) => c.name),
+        )
+      })
       .catch(() => setCompanies([]))
   }, [])
 
@@ -123,6 +136,8 @@ export function PipelineHeader() {
 
   const [editingName, setEditingName] = useState(false)
   const [nameInput, setNameInput] = useState(pipelineName)
+  const [runBusy, setRunBusy] = useState(false)
+  const [runHint, setRunHint] = useState<string | null>(null)
 
   // Sync local input when store name changes (e.g. after load)
   useEffect(() => { setNameInput(pipelineName) }, [pipelineName])
@@ -142,6 +157,44 @@ export function PipelineHeader() {
     a.download = `${pipelineName}.yaml`
     a.click()
     URL.revokeObjectURL(url)
+  }
+
+  async function handleRunPipeline(): Promise<void> {
+    setRunHint(null)
+    if (!pipelineName.trim()) {
+      setRunHint('Set a pipeline name before running.')
+      return
+    }
+    if (!yamlSpec.trim()) {
+      setRunHint('Pipeline YAML is empty — add nodes or fix load errors.')
+      return
+    }
+    setRunBusy(true)
+    try {
+      await savePipeline()
+      const { saveStatus } = usePipelineStore.getState()
+      if (saveStatus === 'error') {
+        setRunHint('Save failed — fix YAML errors, then run again.')
+        return
+      }
+      const res = await fetch(
+        `/api/pipelines/${encodeURIComponent(pipelineName.trim())}/execute`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ trigger_data: {} }),
+        },
+      )
+      if (!res.ok) {
+        const detail = await res.text()
+        throw new Error(detail || `HTTP ${res.status}`)
+      }
+      navigate('/runs', { state: { queuedPipelineName: pipelineName.trim() } })
+    } catch (e) {
+      setRunHint(e instanceof Error ? e.message : 'Run failed')
+    } finally {
+      setRunBusy(false)
+    }
   }
 
   function handleImportYaml(): void {
@@ -164,7 +217,8 @@ export function PipelineHeader() {
   const btnBase = 'text-xs px-3 py-1.5 rounded transition-colors font-medium'
 
   return (
-    <header className="flex items-center gap-3 px-4 py-2 bg-gray-900 border-b border-gray-700 shrink-0 z-30">
+    <header className="flex shrink-0 flex-col gap-1 border-b border-gray-700 bg-gray-900 px-4 py-2 z-30">
+      <div className="flex flex-wrap items-center gap-3">
       {/* Back */}
       <button
         className="text-gray-400 hover:text-white transition-colors p-1 rounded"
@@ -241,14 +295,22 @@ export function PipelineHeader() {
         Save
       </button>
 
-      {/* Run — placeholder; wired in B1-PR-4 */}
+      {/* Run — saves to API then POST /pipelines/{name}/execute */}
       <button
-        className={`${btnBase} bg-indigo-600 hover:bg-indigo-500 text-white`}
-        disabled
-        title="Run pipeline (available after B1-PR-4)"
+        type="button"
+        className={`${btnBase} bg-indigo-600 text-white hover:bg-indigo-500 disabled:cursor-not-allowed disabled:opacity-50`}
+        disabled={runBusy || !yamlSpec.trim()}
+        onClick={() => void handleRunPipeline()}
+        title="Save pipeline to the server, queue a run, then open the Runs page"
       >
-        Run
+        {runBusy ? 'Running…' : 'Run'}
       </button>
+      </div>
+      {runHint && (
+        <p className="text-xs text-amber-400" role="status">
+          {runHint}
+        </p>
+      )}
     </header>
   )
 }

@@ -199,7 +199,8 @@ interface PipelineStoreActions {
   undo(): void
   redo(): void
   savePipeline(): Promise<void>
-  loadPipeline(id: string): Promise<void>
+  /** `pipelineName` is `/api/pipelines/{name}` (not UUID). */
+  loadPipeline(pipelineName: string): Promise<void>
   setActiveRun(runId: string | null): void
   updateNodeRunState(nodeId: string, state: Partial<NodeRunState>): void
   clearRunStates(): void
@@ -589,14 +590,14 @@ export const usePipelineStore = create<PipelineStore>()((set, get) => {
     // ---- Persistence ------------------------------------------------------
 
     async savePipeline() {
-      const { pipelineId, yamlSpec } = get()
-      if (!pipelineId) return
+      const { yamlSpec } = get()
+      if (!yamlSpec.trim()) return
       set({ saveStatus: 'saving' })
       try {
-        const res = await fetch(`/api/pipelines/${pipelineId}`, {
-          method: 'PUT',
+        const res = await fetch('/api/apply', {
+          method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ yaml_spec: yamlSpec }),
+          body: JSON.stringify({ yaml_content: yamlSpec }),
         })
         if (!res.ok) throw new Error(`HTTP ${res.status}`)
         set({ saveStatus: 'saved' })
@@ -605,15 +606,31 @@ export const usePipelineStore = create<PipelineStore>()((set, get) => {
       }
     },
 
-    async loadPipeline(id) {
-      set({ pipelineId: id })
+    async loadPipeline(pipelineName) {
       try {
-        const res = await fetch(`/api/pipelines/${id}`)
+        const res = await fetch(`/api/pipelines/${encodeURIComponent(pipelineName)}`)
         if (!res.ok) throw new Error(`HTTP ${res.status}`)
-        const data = (await res.json()) as { yaml_spec: string; name?: string }
-        get().setYamlSpec(data.yaml_spec)
+        const data = (await res.json()) as { yaml_spec: string; id: string }
+        const yaml = data.yaml_spec
+        const parsed = validateResource(yaml)
+        if (parsed.success) {
+          get().setYamlSpec(yaml)
+          set({ pipelineId: data.id, saveStatus: 'idle' })
+        } else {
+          const msg =
+            parsed.error instanceof Error ? parsed.error.message : String(parsed.error)
+          set({
+            pipelineId: data.id,
+            yamlSpec: yaml,
+            yamlValid: false,
+            yamlErrors: [{ nodeId: '', field: 'yaml', message: msg }],
+            nodes: [],
+            edges: [],
+            saveStatus: 'idle',
+          })
+        }
       } catch {
-        set({ saveStatus: 'error' })
+        set({ saveStatus: 'error', pipelineId: null })
       }
     },
 
@@ -643,7 +660,11 @@ export const usePipelineStore = create<PipelineStore>()((set, get) => {
 // ---------------------------------------------------------------------------
 
 export function useNodeValidationErrors(nodeId: string): NodeValidationError[] {
-  return usePipelineStore(s => s.yamlErrors.filter(e => e.nodeId === nodeId))
+  const yamlErrors = usePipelineStore((s) => s.yamlErrors)
+  return useMemo(
+    () => yamlErrors.filter((e) => e.nodeId === nodeId),
+    [yamlErrors, nodeId],
+  )
 }
 
 export function useAgentBudget(agentName: string) {
