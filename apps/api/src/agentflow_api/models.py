@@ -74,6 +74,7 @@ class APIKey(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
     last_used_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     expires_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    revoked: Mapped[bool] = mapped_column(nullable=False, default=False)
 
 
 class Pipeline(Base):
@@ -88,6 +89,8 @@ class Pipeline(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc))
 
+    webhook_secret: Mapped[str | None] = mapped_column(String(255), nullable=True)
+
     company: Mapped["Company | None"] = relationship("Company", back_populates="pipelines")
     runs: Mapped[list["Run"]] = relationship("Run", back_populates="pipeline")
 
@@ -101,6 +104,9 @@ class Run(Base):
     trigger_data: Mapped[str | None] = mapped_column(Text, nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc))
+
+    started_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    finished_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 
     pipeline: Mapped["Pipeline"] = relationship("Pipeline", back_populates="runs")
     agent_executions: Mapped[list["AgentExecution"]] = relationship("AgentExecution", back_populates="run")
@@ -118,5 +124,7 @@ class AgentExecution(Base):
     error: Mapped[str | None] = mapped_column(Text, nullable=True)
     started_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     finished_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    input_snapshot: Mapped[dict | None] = mapped_column(JSON, nullable=True)
+    output_snapshot: Mapped[dict | None] = mapped_column(JSON, nullable=True)
 
     run: Mapped["Run"] = relationship("Run", back_populates="agent_executions")
