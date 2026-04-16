@@ -284,18 +284,18 @@ describe('compileEdges — sequential 3-node pipeline', () => {
     const pipeline = parsePipeline(THREE_NODE_PIPELINE)
     const graph = compileEdges(pipeline)
 
-    expect(graph.nodes['start'].dependsOn).toEqual([])
-    expect(graph.nodes['process'].dependsOn).toEqual(['start'])
-    expect(graph.nodes['end'].dependsOn).toEqual(['process'])
+    expect(graph.nodes['start']!.dependsOn).toEqual([])
+    expect(graph.nodes['process']!.dependsOn).toEqual(['start'])
+    expect(graph.nodes['end']!.dependsOn).toEqual(['process'])
   })
 
   it('builds correct provides relationships', () => {
     const pipeline = parsePipeline(THREE_NODE_PIPELINE)
     const graph = compileEdges(pipeline)
 
-    expect(graph.nodes['start'].provides).toEqual(['process'])
-    expect(graph.nodes['process'].provides).toEqual(['end'])
-    expect(graph.nodes['end'].provides).toEqual([])
+    expect(graph.nodes['start']!.provides).toEqual(['process'])
+    expect(graph.nodes['process']!.provides).toEqual(['end'])
+    expect(graph.nodes['end']!.provides).toEqual([])
   })
 })
 
