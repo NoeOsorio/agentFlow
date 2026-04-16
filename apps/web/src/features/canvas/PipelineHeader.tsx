@@ -125,7 +125,7 @@ export function PipelineHeader() {
   const pipelineName = usePipelineStore(s => s.pipelineName)
   const companyRef = usePipelineStore(s => s.companyRef)
   const saveStatus = usePipelineStore(s => s.saveStatus)
-  const yamlSpec = usePipelineStore(s => s.yamlSpec)
+  const yamlSpec = usePipelineStore(s => s.yamlSpec) ?? ''
   const yamlPanelOpen = usePipelineStore(s => s.yamlPanelOpen)
 
   const setPipelineName = usePipelineStore(s => s.setPipelineName)

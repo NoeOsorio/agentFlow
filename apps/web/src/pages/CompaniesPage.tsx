@@ -11,6 +11,7 @@ function mapCompanyFromApi(raw: {
   namespace: string
   updated_at: string
   agent_count?: number
+  agents?: { id: string; name: string; role: string }[]
   total_budget_usd?: number | null
   active_agents?: number
   idle_agents?: number
@@ -19,7 +20,7 @@ function mapCompanyFromApi(raw: {
     id: raw.id,
     name: raw.name,
     namespace: raw.namespace,
-    agent_count: raw.agent_count ?? 0,
+    agent_count: Array.isArray(raw.agents) ? raw.agents.length : (raw.agent_count ?? 0),
     total_budget_usd: raw.total_budget_usd ?? null,
     active_agents: raw.active_agents ?? 0,
     idle_agents: raw.idle_agents ?? 0,

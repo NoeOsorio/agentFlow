@@ -163,7 +163,7 @@ program.parseAsync(process.argv).catch((err: unknown) => {
     const cause = (err as NodeJS.ErrnoException & { cause?: unknown }).cause;
     if (
       (err as NodeJS.ErrnoException).code === "ECONNREFUSED" ||
-      (cause instanceof AggregateError && cause.code === "ECONNREFUSED")
+      (cause instanceof AggregateError && "code" in cause && (cause as NodeJS.ErrnoException).code === "ECONNREFUSED")
     ) {
       const cfg = loadConfig();
       console.error(`error: cannot connect to API at ${cfg.apiUrl}`);

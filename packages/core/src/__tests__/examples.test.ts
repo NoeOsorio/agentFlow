@@ -53,17 +53,17 @@ describe('example YAML files', () => {
     // The 3 LLM nodes all depend only on start
     const llmIds = ['llm_perspective_1', 'llm_perspective_2', 'llm_perspective_3']
     for (const id of llmIds) {
-      expect(graph.nodes[id].dependsOn).toEqual(['start'])
+      expect(graph.nodes[id]!.dependsOn).toEqual(['start'])
     }
     // aggregator depends on all 3
-    expect(graph.nodes['aggregator'].dependsOn).toHaveLength(3)
+    expect(graph.nodes['aggregator']!.dependsOn).toHaveLength(3)
   })
 
   it('full-manifest.yaml parseMultiDocument returns 2 resources with correct kinds', () => {
     const yaml = loadExample('full-manifest.yaml')
     const resources = parseMultiDocument(yaml)
     expect(resources).toHaveLength(2)
-    expect(resources[0].kind).toBe('Company')
-    expect(resources[1].kind).toBe('Pipeline')
+    expect(resources[0]!.kind).toBe('Company')
+    expect(resources[1]!.kind).toBe('Pipeline')
   })
 })

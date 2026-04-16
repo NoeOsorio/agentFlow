@@ -73,6 +73,21 @@ def _parse_company_yaml(yaml_spec: str) -> dict:
     return doc
 
 
+async def _resolve_company(identifier: str, db: AsyncSession) -> Company:
+    """Resolve company by UUID or name."""
+    try:
+        uid = uuid.UUID(identifier)
+        company = await db.get(Company, uid)
+    except ValueError:
+        result = await db.execute(
+            select(Company).where(Company.name == identifier)
+        )
+        company = result.scalar_one_or_none()
+    if not company:
+        raise HTTPException(status_code=404, detail="Company not found")
+    return company
+
+
 async def _sync_agents(db: AsyncSession, company: Company, spec: dict) -> None:
     """Sync Agent rows from YAML spec. Insert new, update existing, delete removed."""
     spec_agents = spec.get("spec", {}).get("agents", []) or []
@@ -151,20 +166,16 @@ async def create_company(request_body: dict, db: DB):
 
 
 @router.get("/{company_id}", response_model=CompanyRead)
-async def get_company(company_id: uuid.UUID, db: DB):
-    company = await db.get(Company, company_id)
-    if not company:
-        raise HTTPException(status_code=404, detail="Company not found")
+async def get_company(company_id: str, db: DB):
+    company = await _resolve_company(company_id, db)
     await db.refresh(company, ["agents"])
     return company
 
 
 @router.put("/{company_id}", response_model=CompanyRead)
-async def update_company(company_id: uuid.UUID, request_body: dict, db: DB):
+async def update_company(company_id: str, request_body: dict, db: DB):
     """Full YAML update — re-validates and re-syncs agents."""
-    company = await db.get(Company, company_id)
-    if not company:
-        raise HTTPException(status_code=404, detail="Company not found")
+    company = await _resolve_company(company_id, db)
     yaml_spec = request_body.get("yaml_spec", "")
     doc = _parse_company_yaml(yaml_spec)
     meta = doc.get("metadata", {})
@@ -180,20 +191,16 @@ async def update_company(company_id: uuid.UUID, request_body: dict, db: DB):
 
 
 @router.delete("/{company_id}", status_code=204)
-async def delete_company(company_id: uuid.UUID, db: DB):
-    company = await db.get(Company, company_id)
-    if not company:
-        raise HTTPException(status_code=404, detail="Company not found")
+async def delete_company(company_id: str, db: DB):
+    company = await _resolve_company(company_id, db)
     await db.delete(company)
     await db.commit()
 
 
 @router.get("/{company_id}/org-structure", response_model=list[OrgNode])
-async def get_org_structure(company_id: uuid.UUID, db: DB):
+async def get_org_structure(company_id: str, db: DB):
     """Returns org tree based on reports_to field in agent YAML spec."""
-    company = await db.get(Company, company_id)
-    if not company:
-        raise HTTPException(status_code=404, detail="Company not found")
+    company = await _resolve_company(company_id, db)
     await db.refresh(company, ["agents"])
 
     # Parse reports_to from each agent's yaml_spec
@@ -222,10 +229,8 @@ async def get_org_structure(company_id: uuid.UUID, db: DB):
 
 
 @router.get("/{company_id}/budget")
-async def get_company_budget(company_id: uuid.UUID, db: DB):
-    company = await db.get(Company, company_id)
-    if not company:
-        raise HTTPException(status_code=404, detail="Company not found")
+async def get_company_budget(company_id: str, db: DB):
+    company = await _resolve_company(company_id, db)
     await db.refresh(company, ["agents"])
 
     current_month = datetime.now(timezone.utc).strftime("%Y-%m")

@@ -13,6 +13,21 @@ from ..models import AgentExecution, Company, Pipeline, Run, RunStatus
 from ..run_read import run_to_read
 from ..schemas import RunRead
 
+
+async def _resolve_pipeline(identifier: str, db: AsyncSession) -> Pipeline:
+    """Resolve pipeline by UUID or name."""
+    try:
+        uid = uuid.UUID(identifier)
+        pipeline = await db.get(Pipeline, uid)
+    except ValueError:
+        result = await db.execute(
+            select(Pipeline).where(Pipeline.name == identifier)
+        )
+        pipeline = result.scalar_one_or_none()
+    if not pipeline:
+        raise HTTPException(status_code=404, detail="Pipeline not found")
+    return pipeline
+
 router = APIRouter(tags=["runs"])
 
 DB = Annotated[AsyncSession, Depends(get_db)]
@@ -21,9 +36,9 @@ DB = Annotated[AsyncSession, Depends(get_db)]
 @router.get("/runs", response_model=list[RunRead])
 async def list_runs(
     db: DB,
-    pipeline_id: uuid.UUID | None = Query(default=None),
+    pipeline_id: str | None = Query(default=None),
     pipeline_name: str | None = Query(default=None),
-    company_id: uuid.UUID | None = Query(default=None),
+    company_id: str | None = Query(default=None),
     status: str | None = Query(default=None),
 ):
     query = select(Run).options(joinedload(Run.pipeline)).order_by(Run.created_at.desc())
@@ -37,9 +52,27 @@ async def list_runs(
         if pipeline:
             query = query.where(Run.pipeline_id == pipeline.id)
     elif pipeline_id:
-        query = query.where(Run.pipeline_id == pipeline_id)
+        try:
+            uid = uuid.UUID(pipeline_id)
+            query = query.where(Run.pipeline_id == uid)
+        except ValueError:
+            pipeline_result = await db.execute(
+                select(Pipeline).where(Pipeline.name == pipeline_id)
+            )
+            pipeline = pipeline_result.scalar_one_or_none()
+            if pipeline:
+                query = query.where(Run.pipeline_id == pipeline.id)
     if company_id:
-        query = query.join(Pipeline).where(Pipeline.company_id == company_id)
+        try:
+            uid = uuid.UUID(company_id)
+            query = query.join(Pipeline).where(Pipeline.company_id == uid)
+        except ValueError:
+            company_result = await db.execute(
+                select(Company).where(Company.name == company_id)
+            )
+            company = company_result.scalar_one_or_none()
+            if company:
+                query = query.join(Pipeline).where(Pipeline.company_id == company.id)
     if status:
         query = query.where(Run.status == status)
     result = await db.execute(query)
@@ -87,14 +120,12 @@ async def get_run_nodes(run_id: uuid.UUID, db: DB):
 
 
 @router.post("/pipelines/{pipeline_id}/execute", response_model=RunRead, status_code=202)
-async def execute_pipeline(pipeline_id: uuid.UUID, body: dict, db: DB):
+async def execute_pipeline(pipeline_id: str, body: dict, db: DB):
     """Trigger a pipeline run. response_mode: 'blocking' | 'streaming'"""
-    pipeline = await db.get(Pipeline, pipeline_id)
-    if not pipeline:
-        raise HTTPException(status_code=404, detail="Pipeline not found")
+    pipeline = await _resolve_pipeline(pipeline_id, db)
 
     run = Run(
-        pipeline_id=pipeline_id,
+        pipeline_id=pipeline.id,
         status=RunStatus.pending,
         trigger_data=json.dumps(body.get("inputs", {})),
         started_at=datetime.now(timezone.utc),

@@ -52,15 +52,48 @@ let _saveTimer: ReturnType<typeof setTimeout> | null = null
 
 let _heartbeatWs: WebSocket | null = null
 
-/** Backend has no `/api/ws/...` yet; keep hook for a future WebSocket feed. */
+let _heartbeatRetries = 0
+const MAX_HEARTBEAT_RETRIES = 3
+const HEARTBEAT_RETRY_DELAY_MS = 2000
+
 function _connectHeartbeat(
-  _companyName: string,
-  _onMessage: (health: import('./types').AgentHealthState) => void,
+  companyId: string,
+  onMessage: (health: import('./types').AgentHealthState) => void,
 ): void {
   if (_heartbeatWs) {
     _heartbeatWs.close()
     _heartbeatWs = null
   }
+  _heartbeatRetries = 0
+
+  function connect() {
+    const wsUrl = `ws://${window.location.host}/api/ws/companies/${encodeURIComponent(companyId)}/agents`
+    const ws = new WebSocket(wsUrl)
+    _heartbeatWs = ws
+
+    ws.onmessage = (event) => {
+      try {
+        const data = JSON.parse(event.data as string) as import('./types').AgentHealthState
+        onMessage(data)
+      } catch {
+        // ignore malformed messages
+      }
+    }
+
+    ws.onclose = () => {
+      if (_heartbeatWs !== ws) return // replaced by a newer connection
+      _heartbeatRetries += 1
+      if (_heartbeatRetries <= MAX_HEARTBEAT_RETRIES) {
+        setTimeout(connect, HEARTBEAT_RETRY_DELAY_MS)
+      }
+    }
+
+    ws.onerror = () => {
+      ws.close()
+    }
+  }
+
+  connect()
 }
 
 function scheduleSave(saveFn: () => Promise<void>): void {
@@ -92,7 +125,7 @@ export const useCompanyStore = create<CompanyStore>()((set, get) => ({
     const data = (await res.json()) as { yaml_spec: string; id: string }
     get().setYamlSpec(data.yaml_spec)
     set({ companyId: data.id })
-    _connectHeartbeat(companyName, (health) => {
+    _connectHeartbeat(data.id, (health) => {
       get().setAgentHealth(health.agentName, health)
     })
   },
@@ -190,7 +223,24 @@ export const useCompanyStore = create<CompanyStore>()((set, get) => ({
   },
 
   async refreshBudgets() {
-    // No GET /api/companies/{name}/agents on the backend yet.
-    return
+    const { companyId, companyName } = get()
+    const identifier = companyId ?? companyName
+    if (!identifier) return
+    const res = await fetch(`/api/companies/${encodeURIComponent(identifier)}/budget`)
+    if (!res.ok) return
+    const data = (await res.json()) as {
+      company_name: string
+      agents: { agent_name: string; month: string; spent_usd: number; token_count: number }[]
+    }
+    for (const agent of data.agents) {
+      get().setAgentBudget(agent.agent_name, {
+        agentName: agent.agent_name,
+        spentUsd: agent.spent_usd,
+        budgetUsd: 0,
+        remainingUsd: 0,
+        pctUsed: 0,
+        month: agent.month,
+      })
+    }
   },
 }))

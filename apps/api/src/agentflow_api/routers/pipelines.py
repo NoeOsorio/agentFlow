@@ -87,17 +87,43 @@ async def _validate_agent_refs(db: AsyncSession, spec: dict, company: Company) -
     return errors
 
 
+async def _resolve_pipeline(identifier: str, db: AsyncSession) -> Pipeline:
+    """Resolve pipeline by UUID or name."""
+    try:
+        uid = uuid.UUID(identifier)
+        pipeline = await db.get(Pipeline, uid)
+    except ValueError:
+        result = await db.execute(
+            select(Pipeline).where(Pipeline.name == identifier)
+        )
+        pipeline = result.scalar_one_or_none()
+    if not pipeline:
+        raise HTTPException(status_code=404, detail="Pipeline not found")
+    return pipeline
+
+
 # ── Endpoints ─────────────────────────────────────────────────────────────────
 
 @router.get("/", response_model=list[PipelineRead])
 async def list_pipelines(
     db: DB,
-    company_id: uuid.UUID | None = Query(default=None),
+    company_id: str | None = Query(default=None),
     namespace: str | None = Query(default=None),
 ):
     query = select(Pipeline).order_by(Pipeline.created_at.desc())
     if company_id:
-        query = query.where(Pipeline.company_id == company_id)
+        try:
+            uid = uuid.UUID(company_id)
+            query = query.where(Pipeline.company_id == uid)
+        except ValueError:
+            result = await db.execute(
+                select(Company).where(Company.name == company_id)
+            )
+            company = result.scalar_one_or_none()
+            if company:
+                query = query.where(Pipeline.company_id == company.id)
+            else:
+                return []
     if namespace:
         query = query.where(Pipeline.namespace == namespace)
     result = await db.execute(query)
@@ -133,18 +159,14 @@ async def create_pipeline(request_body: dict, db: DB):
 
 
 @router.get("/{pipeline_id}", response_model=PipelineRead)
-async def get_pipeline(pipeline_id: uuid.UUID, db: DB):
-    pipeline = await db.get(Pipeline, pipeline_id)
-    if not pipeline:
-        raise HTTPException(status_code=404, detail="Pipeline not found")
+async def get_pipeline(pipeline_id: str, db: DB):
+    pipeline = await _resolve_pipeline(pipeline_id, db)
     return pipeline
 
 
 @router.put("/{pipeline_id}", response_model=PipelineRead)
-async def update_pipeline(pipeline_id: uuid.UUID, request_body: dict, db: DB):
-    pipeline = await db.get(Pipeline, pipeline_id)
-    if not pipeline:
-        raise HTTPException(status_code=404, detail="Pipeline not found")
+async def update_pipeline(pipeline_id: str, request_body: dict, db: DB):
+    pipeline = await _resolve_pipeline(pipeline_id, db)
     yaml_spec = request_body.get("yaml_spec", "")
     doc = _parse_pipeline_yaml(yaml_spec)
     meta = doc.get("metadata", {})
@@ -167,23 +189,19 @@ async def update_pipeline(pipeline_id: uuid.UUID, request_body: dict, db: DB):
 
 
 @router.delete("/{pipeline_id}", status_code=204)
-async def delete_pipeline(pipeline_id: uuid.UUID, db: DB):
+async def delete_pipeline(pipeline_id: str, db: DB):
     from sqlalchemy import delete as sql_delete
-    pipeline = await db.get(Pipeline, pipeline_id)
-    if not pipeline:
-        raise HTTPException(status_code=404, detail="Pipeline not found")
-    run_ids = select(Run.id).where(Run.pipeline_id == pipeline_id)
+    pipeline = await _resolve_pipeline(pipeline_id, db)
+    run_ids = select(Run.id).where(Run.pipeline_id == pipeline.id)
     await db.execute(sql_delete(AgentExecution).where(AgentExecution.run_id.in_(run_ids)))
-    await db.execute(sql_delete(Run).where(Run.pipeline_id == pipeline_id))
+    await db.execute(sql_delete(Run).where(Run.pipeline_id == pipeline.id))
     await db.delete(pipeline)
     await db.commit()
 
 
 @router.get("/{pipeline_id}/validate", response_model=ValidationResult)
-async def validate_pipeline(pipeline_id: uuid.UUID, db: DB):
-    pipeline = await db.get(Pipeline, pipeline_id)
-    if not pipeline:
-        raise HTTPException(status_code=404, detail="Pipeline not found")
+async def validate_pipeline(pipeline_id: str, db: DB):
+    pipeline = await _resolve_pipeline(pipeline_id, db)
 
     errors = []
     try:
@@ -199,11 +217,9 @@ async def validate_pipeline(pipeline_id: uuid.UUID, db: DB):
 
 
 @router.get("/{pipeline_id}/compiled")
-async def get_compiled_pipeline(pipeline_id: uuid.UUID, db: DB):
+async def get_compiled_pipeline(pipeline_id: str, db: DB):
     """Returns a simple compiled representation of the pipeline DAG."""
-    pipeline = await db.get(Pipeline, pipeline_id)
-    if not pipeline:
-        raise HTTPException(status_code=404, detail="Pipeline not found")
+    pipeline = await _resolve_pipeline(pipeline_id, db)
 
     try:
         doc = _yaml.safe_load(pipeline.yaml_spec) or {}
@@ -227,7 +243,7 @@ async def get_compiled_pipeline(pipeline_id: uuid.UUID, db: DB):
     exit_points = [nid for nid, targets in adjacency.items() if not targets]
 
     return {
-        "pipeline_id": str(pipeline_id),
+        "pipeline_id": str(pipeline.id),
         "name": pipeline.name,
         "adjacency": adjacency,
         "entry_points": entry_points,
@@ -238,15 +254,13 @@ async def get_compiled_pipeline(pipeline_id: uuid.UUID, db: DB):
 
 
 @router.post("/{pipeline_id}/execute", response_model=RunRead, status_code=202)
-async def execute_pipeline_endpoint(pipeline_id: uuid.UUID, body: dict, db: DB):
+async def execute_pipeline_endpoint(pipeline_id: str, body: dict, db: DB):
     """Trigger a pipeline run. Dispatches Celery task if available."""
     import json
-    pipeline = await db.get(Pipeline, pipeline_id)
-    if not pipeline:
-        raise HTTPException(status_code=404, detail="Pipeline not found")
+    pipeline = await _resolve_pipeline(pipeline_id, db)
 
     run = Run(
-        pipeline_id=pipeline_id,
+        pipeline_id=pipeline.id,
         status="pending",
         trigger_data=json.dumps(body.get("inputs", {})),
     )

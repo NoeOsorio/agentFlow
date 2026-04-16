@@ -82,10 +82,13 @@ All three stay in sync. GUI changes update the YAML. YAML changes update the GUI
 # Clone and install everything
 git clone https://github.com/your-org/agentflow
 cd agentflow
-pnpm run setup
+pnpm install
 
 # Start infrastructure
 docker compose up postgres redis -d
+
+# Run database migrations (required on first setup and after pulls)
+cd apps/api && uv run alembic upgrade head && cd ../..
 
 # Run the stack
 pnpm dev                                              # Frontend (http://localhost:3000)
