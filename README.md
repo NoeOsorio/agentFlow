@@ -1,191 +1,240 @@
 <div align="center">
 
+<!-- TODO: create docs/banner-dark.png and docs/banner-light.png (1280x640) using the noeosorio.com palette (background #18181b, accent #bef264 → #10b981), then uncomment
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/banner-dark.png">
+  <img alt="AgentFlow: declarative, observable AI agent pipelines" src="docs/banner-light.png" width="600">
+</picture>
+-->
+
 # ⚡ AgentFlow
 
-**AI agent pipelines. Declarative. Observable. Autonomous.**
+**Define multi-agent AI pipelines in one YAML file. AgentFlow compiles, runs, and watches them for you.**
 
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![TypeScript](https://img.shields.io/badge/TypeScript-5.x-3178C6?logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
-[![Python](https://img.shields.io/badge/Python-3.12+-3776AB?logo=python&logoColor=white)](https://www.python.org/)
-[![React](https://img.shields.io/badge/React-19-61DAFB?logo=react&logoColor=black)](https://react.dev/)
-[![LangGraph](https://img.shields.io/badge/LangGraph-latest-1C3C3C?logo=langchain&logoColor=white)](https://github.com/langchain-ai/langgraph)
-[![pnpm](https://img.shields.io/badge/pnpm-monorepo-F69220?logo=pnpm&logoColor=white)](https://pnpm.io/)
+![License](https://img.shields.io/badge/license-MIT-84cc16?style=for-the-badge&labelColor=18181b)
+![TypeScript](https://img.shields.io/badge/TypeScript-5.x-84cc16?style=for-the-badge&logo=typescript&logoColor=bef264&labelColor=18181b)
+![Python](https://img.shields.io/badge/Python-3.12+-84cc16?style=for-the-badge&logo=python&logoColor=bef264&labelColor=18181b)
+![React](https://img.shields.io/badge/React-19-84cc16?style=for-the-badge&logo=react&logoColor=bef264&labelColor=18181b)
 
-```yaml
-pipeline: wellness-website
-trigger: stripe.payment.success
-agents: [research, copywriter, identity, frontend, qa]
-output:
-  type: website
-  deploy: vercel
-  notify: email
-```
-
-*That's all you write. AgentFlow handles the rest.*
+[Architecture](ARCHITECTURE.md) · [Roadmap](docs/ROADMAP.md) · [Report a bug](../../issues)
 
 </div>
 
----
+Building with AI agents today is chaotic: loose agents nobody monitors, hardcoded prompts, zero cost visibility, and when something breaks nobody knows where or why. AgentFlow turns a declarative YAML spec into a DAG, executes it with LangGraph, and reports status, cost, and output for every node. Think Kubernetes, but for intelligent pipelines.
 
-## What is AgentFlow?
+```yaml
+apiVersion: agentflow.ai/v1
+kind: Pipeline
+metadata:
+  name: simple-llm-pipeline
+spec:
+  nodes:
+    - id: start
+      type: start
+      outputs: [{ key: user_prompt, type: string, required: true }]
+    - id: llm_1
+      type: llm
+      model: { provider: anthropic, model_id: claude-sonnet-4-6 }
+      prompt: { user: "{{#start.user_prompt#}}" }
+    - id: end
+      type: end
+      inputs: [{ node_id: llm_1, variable: output }]
+  edges:
+    - { id: e1, source: start, target: llm_1 }
+    - { id: e2, source: llm_1, target: end }
+```
 
-AgentFlow runs multi-agent AI pipelines end-to-end from a single YAML file — no glue code, no babysitting. Define **what** you want. The runtime figures out **how**.
+More examples in [`packages/core/examples/`](packages/core/examples).
 
-Think Kubernetes, but for intelligent pipelines.
+**Contents:** [Features](#-features) · [Quickstart](#-quickstart) · [Configuration](#%EF%B8%8F-configuration) · [Architecture](#%EF%B8%8F-architecture) · [Structure](#-structure) · [Roadmap](#%EF%B8%8F-roadmap) · [Contributing](#-contributing) · [License](#-license)
 
----
-
-## The Problem
-
-Building with AI agents today is chaotic: loose agents nobody monitors, hardcoded prompts, zero cost visibility, and when something breaks — nobody knows where or why.
-
-AgentFlow fixes this with three principles:
+## ✨ Features
 
 | | |
 |---|---|
-| **Declarative** | Describe the desired state, not the steps. Like k8s. |
-| **Observable** | Every agent reports its status, cost, and output. Nothing runs silently. |
-| **Autonomous** | Once configured, the pipeline runs itself. You only intervene when something fails — and the system tells you exactly where. |
+| **Declarative** | Pipelines, agents, and companies are YAML manifests (`apiVersion` / `kind` / `spec`) validated by Zod schemas in `@agentflow/core`. |
+| **Visual canvas** | React Flow editor in `apps/web`. The canvas and the YAML stay in sync; **the YAML is always the source of truth.** |
+| **14 node types** | `start`, `end`, `llm`, `agent_pod`, `code`, `http`, `if_else`, `template`, `variable_assigner`, `variable_aggregator`, `iteration`, `human_input`, `knowledge_retrieval`, `sub_workflow`. |
+| **DAG runtime** | LangGraph executor with checkpoints, token budgets, dead-letter handling, heartbeats, and event streaming (`services/runtime`). |
+| **Observable runs** | Run history, per-node status, pause / resume / stop, human approvals, and live logs over WebSocket (`/api/ws/runs/{run_id}`). |
+| **Triggers** | Manual execution, webhooks (`/api/webhooks/{pipeline_id}/{source}`), and schedules. |
+| **kubectl-style CLI** | `agentflow apply`, `get`, `delete`, `run`, `logs` from `@agentflow/sdk`. |
 
----
+## 🖼️ Demo
 
-## How It Works
+<!-- TODO: add docs/demo.gif (canvas editing a pipeline + a run streaming logs) -->
+Demo coming soon.
 
-```
-Trigger → Orchestrator → AgentPods → Output
-```
+## 🚀 Quickstart
 
-1. **Trigger** — A Stripe payment, form submission, Linear task, or any webhook fires the pipeline.
-2. **Orchestrator** — Reads the YAML, builds a dependency graph (DAG), and executes agents in order — parallelizing everything it can.
-3. **AgentPods** — Each agent is an isolated unit with its own prompt, model, token limit, timeout, and output validation.
-4. **Output** — The result is assembled, deployed (Vercel, email, social post, etc.), and delivered — without the operator touching anything.
+### Prerequisites
 
----
+Node.js ≥ 20, pnpm ≥ 9, Python ≥ 3.12, [uv](https://docs.astral.sh/uv/), Docker.
 
-## Interfaces
-
-| Level | Interface | Who uses it |
-|---|---|---|
-| Visual | Drag & drop canvas (GUI) | Operators, no-code |
-| Declarative | `agentflow.yaml` | Developers |
-| Autonomous | Runtime | Nobody — it runs itself |
-
-All three stay in sync. GUI changes update the YAML. YAML changes update the GUI. **The YAML is always the source of truth.**
-
----
-
-## Quick Start
-
-**Requirements:** Node.js ≥ 20, pnpm ≥ 9, Python ≥ 3.12, [uv](https://docs.astral.sh/uv/)
+### Local setup
 
 ```bash
-# Clone and install everything
-git clone https://github.com/your-org/agentflow
-cd agentflow
-pnpm install
+git clone https://github.com/NoeOsorio/agentFlow.git
+cd agentFlow
+pnpm run setup                 # pnpm install + uv sync for apps/api and services/runtime
+cp .env.example .env
+cp apps/api/.env.example apps/api/.env
 
-# Start infrastructure
+# Infrastructure
 docker compose up postgres redis -d
 
-# Run database migrations (required on first setup and after pulls)
-cd apps/api && uv run alembic upgrade head && cd ../..
+# Database migrations (first setup and after every pull)
+(cd apps/api && uv run alembic upgrade head)
 
-# Run the stack
-pnpm dev                                              # Frontend (http://localhost:3000)
-cd apps/api && uv run uvicorn agentflow_api.main:app --reload --port 8000  # API
+# Frontend (http://localhost:3000)
+pnpm dev
+
+# API (http://localhost:8000, docs at /docs) in a second terminal
+(cd apps/api && uv run uvicorn agentflow_api.main:app --reload --port 8000)
 ```
 
-Full stack via Docker:
+<details>
+<summary>Full stack with Docker</summary>
+
 ```bash
 docker compose up
-# Web → http://localhost:3000
-# API → http://localhost:8000
+# Web  → http://localhost:3000
+# API  → http://localhost:8000
 # Docs → http://localhost:8000/docs
 ```
 
-## AgentFlow CLI
+</details>
 
-The kubectl-style **`agentflow`** command is implemented in **`packages/sdk`** and calls the same HTTP API as the web app. The compiled entrypoint is `packages/sdk/dist/cli/index.js`.
+> [!NOTE]
+> `agentflow run` and the **Run** button call `POST /api/pipelines/{name}/execute`, which creates a **pending** run and dispatches a Celery task. The `runtime` container currently starts a health-check stand-in, so runs only progress once a Celery worker consumes the queue (see [`plans/`](plans) and [`services/runtime/`](services/runtime)).
 
-**1. Build the SDK** (required once, or after changing the CLI):
+### CLI
+
+The CLI lives in `packages/sdk` and talks to the same HTTP API as the web app. Build it once, then run it from the repo root through the `af` script:
 
 ```bash
 pnpm --filter @agentflow/sdk build
-```
 
-**2. Run it from the repo root** using the **`af`** script (recommended):
-
-```bash
 pnpm run af -- --help
 pnpm run af -- config set-context --url http://localhost:8000
+pnpm run af -- apply -f packages/core/examples/simple-pipeline.yaml
 pnpm run af -- get pipelines
-pnpm run af -- run <pipeline-name>
+pnpm run af -- run simple-llm-pipeline --input '{"user_prompt":"Hello"}'
 ```
 
-The `--` separates pnpm arguments from CLI arguments. The wrapper **`packages/sdk/run-cli.cjs`** removes an extra `--` that pnpm injects so Commander parses flags correctly.
+<details>
+<summary>Why <code>pnpm run af --</code> and not <code>pnpm exec agentflow</code>?</summary>
 
-**Alternative — SDK package script:**
+- The `--` separates pnpm arguments from CLI arguments; `packages/sdk/run-cli.cjs` strips the extra `--` pnpm injects so Commander parses flags correctly.
+- `pnpm exec agentflow` usually fails with "command not found": pnpm does not expose `@agentflow/sdk`'s `bin` on `PATH` for `exec`, and the root package is also named `agentflow`.
+- Alternatives: `pnpm --filter @agentflow/sdk run agentflow -- --help` or `node packages/sdk/dist/cli/index.js --help`.
 
-```bash
-pnpm --filter @agentflow/sdk run agentflow -- --help
+</details>
+
+### Scripts
+
+| Command | What it does |
+|---|---|
+| `pnpm run setup` | Install JS deps and sync Python envs (`uv sync --group dev`) |
+| `pnpm dev` | Run all dev servers through Turborepo |
+| `pnpm build` | Build every package |
+| `pnpm test` | Run tests across the monorepo |
+| `pnpm lint` | Lint across the monorepo |
+| `pnpm run af -- <cmd>` | Run the AgentFlow CLI |
+
+## ⚙️ Configuration
+
+Copy `.env.example` (root) and `apps/api/.env.example` and fill in your own values.
+
+| Variable | Used by | Purpose |
+|---|---|---|
+| `DATABASE_URL` | API | PostgreSQL connection (`postgresql+asyncpg://…` for the API) |
+| `REDIS_URL` | API, runtime | Redis for state and checkpoints |
+| `CELERY_BROKER_URL` | API, runtime | Celery broker for pipeline runs |
+| `AGENTFLOW_ENV` | API, runtime | `development` / `production` |
+| `AGENTFLOW_SECRET_KEY` | API | Signing secret; change it outside local dev |
+| `INTERNAL_SECRET` | API | Shared secret for `/api/internal/*` callbacks from the runtime |
+| `CORS_ORIGINS` | API | Allowed web origins (JSON list) |
+| `ANTHROPIC_API_KEY` / `OPENAI_API_KEY` | runtime | LLM providers per node |
+| `KNOWLEDGE_BASE_URL` | API | Optional knowledge base endpoint for `knowledge_retrieval` nodes |
+| `GROQ_API_KEY`, `VERCEL_TOKEN`, `VERCEL_TEAM_ID`, `RESEND_API_KEY` | planned | Reserved for upcoming providers and output routers |
+
+> [!WARNING]
+> LLM nodes call paid APIs. Set budgets in your manifests and never commit real keys.
+
+## 🏗️ Architecture
+
+```mermaid
+flowchart LR
+    Web["apps/web<br/>React + React Flow"] -->|REST / WebSocket| API
+    CLI["packages/sdk<br/>agentflow CLI"] -->|REST| API
+    Hook["Webhooks / schedules"] --> API
+    API["apps/api<br/>FastAPI"] --> PG[(PostgreSQL)]
+    API -->|Celery task| Redis[(Redis)]
+    Redis --> RT["services/runtime<br/>LangGraph DAG executor"]
+    RT -->|events / complete| API
+    RT --> LLM["Anthropic / OpenAI"]
+    Core["packages/core<br/>Zod schemas + YAML parser"] -.-> Web
+    Core -.-> CLI
 ```
 
-**Alternative — Node only:**
-
-```bash
-node packages/sdk/dist/cli/index.js --help
-```
-
-**Why not `pnpm exec agentflow`?** In this workspace, `pnpm exec agentflow` usually fails with “command not found” because pnpm does not expose `@agentflow/sdk`’s `bin` on `PATH` for `exec` the way a global install does. The root package is also named `agentflow`, which is easy to confuse with the CLI binary.
-
-**Runs and execution:** `agentflow run` (and **Run** in the canvas) call `POST /api/pipelines/{name}/execute` and create a **pending** run in the database. Status moves to running/completed only after a **runtime worker** is wired up to consume that queue (see `plans/` and `services/runtime/`).
-
----
-
-## Monorepo Structure
-
-```
-apps/web/          Vite + React + Tailwind — canvas GUI
-apps/api/          FastAPI — pipeline CRUD and run management
-services/runtime/  LangGraph DAG engine and AgentPod base (Python)
-packages/core/     YAML schema + Zod parser, shared TS types
-packages/ui/       Shared React component library
-packages/sdk/      TypeScript SDK + `agentflow` CLI (see [AgentFlow CLI](#agentflow-cli))
-```
-
----
-
-## Tech Stack
+Layer diagrams, AgentPod lifecycle, the YAML spec reference, and DAG engine internals live in [ARCHITECTURE.md](ARCHITECTURE.md).
 
 | Layer | Tech |
 |---|---|
-| Canvas GUI | React Flow |
-| State | Zustand |
-| YAML | js-yaml |
-| Job queue | BullMQ + Redis |
-| Orchestration | LangGraph |
-| Deploy | Vercel API |
-| Email | Resend |
-| LLMs | Anthropic / OpenAI / Groq (per-agent) |
+| Canvas GUI | React 19, React Flow (`@xyflow/react`), Zustand, Tailwind, Vite |
+| Schemas | Zod, js-yaml (`@agentflow/core`) |
+| API | FastAPI, SQLAlchemy (async), Alembic, PostgreSQL 16 |
+| Job queue | Celery + Redis 7 |
+| Orchestration | LangGraph, LangChain Anthropic / OpenAI |
+| CLI | Commander (`@agentflow/sdk`) |
+| Tooling | pnpm workspaces, Turborepo, uv, Docker Compose, Kubernetes manifests |
 
----
+## 📁 Structure
 
-## Architecture
+<details>
+<summary>View structure</summary>
 
-For a full architectural breakdown — layer diagrams, AgentPod lifecycle, YAML spec reference, DAG engine internals — see [ARCHITECTURE.md](./ARCHITECTURE.md).
+```text
+apps/
+  web/             Vite + React + Tailwind canvas GUI
+  api/             FastAPI: companies, pipelines, runs, triggers, agents
+  cli-docs/        Astro Starlight site for the CLI docs
+services/
+  runtime/         LangGraph DAG engine, node implementations, Celery tasks
+packages/
+  core/            YAML schema, Zod parser, shared TS types, examples
+  ui/              Shared React component library
+  sdk/             TypeScript SDK + agentflow CLI
+infrastructure/
+  k8s/             Kubernetes manifests (api, web, worker, postgres, redis)
+docs/              Roadmap, architecture, guides, ADRs
+plans/             Implementation plans per workstream and PR
+```
 
----
+</details>
 
-## Contributing
+## 🗺️ Roadmap
 
-AgentFlow is designed to be extended. Any agent that implements the `AgentPod` interface plugs into the system. Any output that implements `OutputRouter` can receive a pipeline result.
+Phases and status are tracked in [docs/ROADMAP.md](docs/ROADMAP.md); per-PR plans live in [`plans/`](plans).
 
-Full interface docs will ship with the first release.
+- [x] Monorepo scaffold (Turborepo, core schemas, API, canvas, runtime skeleton)
+- [ ] Round-trip YAML ↔ AST ↔ canvas with full validation
+- [ ] Production runtime: Celery worker, budgets, retries, dead-letter queue, cost tracking
+- [ ] Output routers (deploy, email, social) and first AgentPods
+
+## 🤝 Contributing
+
+AgentFlow is designed to be extended: any agent that implements the `AgentPod` interface plugs into the runtime, and any output that implements `OutputRouter` can receive a pipeline result. Open an [issue](../../issues) to discuss a change before sending a PR. Full interface docs will ship with the first release.
+
+## 📄 License
+
+Distributed under the MIT License. See [`LICENSE`](LICENSE).
 
 ---
 
 <div align="center">
 
-*AgentFlow — build once, run forever.*
+Made with ☕ by [Noé Osorio](https://noeosorio.com) and contributors · [business@noeosorio.com](mailto:business@noeosorio.com)
 
 </div>
